@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CorpusView — Юнит-экономика (детально)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  :root {
+    --bg: #0a0a0a; --surface: #151518; --surface2: #1c1c21; --border: #2a2a30;
+    --text: #e4e4e7; --text-muted: #8b8b94;
+    --accent-green: #48F1AA; --accent-purple: #D2ABF8; --accent-blue: #8ECDF8;
+    --accent-orange: #FFB86C; --accent-pink: #FF79C6; --accent-red: #FF5555; --accent-cyan: #C0EEFF;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  .nav { position:fixed; top:0; left:0; width:260px; height:100vh; background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; overflow-y:auto; z-index:100; }
+  .nav-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); margin-bottom:20px; }
+  .nav-section { margin-bottom:16px; }
+  .nav-section-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:6px; padding-left:8px; }
+  .nav a { display:flex; align-items:center; gap:8px; padding:7px 10px; color:var(--text); text-decoration:none; font-size:13px; border-radius:6px; transition:background 0.15s; }
+  .nav a:hover { background:var(--surface2); }
+  .nav a .dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+  .main { margin-left:260px; padding:48px 48px 120px; max-width:1060px; }
+  .hero { margin-bottom:64px; padding-bottom:48px; border-bottom:1px solid var(--border); }
+  .hero h1 { font-size:36px; font-weight:700; margin-bottom:12px; }
+  .hero .subtitle { font-size:18px; color:var(--text-muted); max-width:640px; }
+  .section { margin-bottom:64px; scroll-margin-top:32px; }
+  .section-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+  .section-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+  .section-header h2 { font-size:24px; font-weight:700; }
+  .vpm-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:24px; }
+  .vpm-card-header { padding:16px 20px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border); }
+  .vpm-card-body { padding:20px; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .cell { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .cell-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px; }
+  .cell-content { font-size:14px; color:var(--text); line-height:1.7; }
+  .cell-content p { margin-bottom:8px; }
+  .cell-content ul { padding-left:18px; margin-bottom:8px; }
+  .cell-content li { margin-bottom:4px; font-size:13px; }
+  .one-liner { background:linear-gradient(135deg,rgba(72,241,170,0.08),rgba(210,171,248,0.08)); border:1px solid rgba(72,241,170,0.2); border-radius:12px; padding:28px 32px; margin-bottom:24px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { padding:10px 14px; text-align:left; color:var(--text-muted); font-weight:600; }
+  td { padding:10px 14px; }
+  tr { border-bottom:1px solid var(--border); }
+  tr:last-child { border-bottom:none; }
+  .highlight-row { background:rgba(72,241,170,0.05); }
+  .big-num { font-size:28px; font-weight:700; }
+  .metric-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; text-align:center; }
+  .metric-label { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted); margin-bottom:8px; }
+  code { background:var(--surface2); padding:2px 6px; border-radius:4px; font-size:13px; }
+  .chart-container { position:relative; width:100%; padding:20px; }
+  .chart-container canvas { max-height:360px; }
+  @media (max-width:900px) {
+    .nav { display:none; }
+    .main { margin-left:0; padding:24px 16px 80px; }
+    .grid-3,.grid-2 { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-title">CorpusView</div>
+  <div class="nav-section">
+    <a href="index.html" style="color:var(--accent-green)"><span class="dot" style="background:var(--accent-green)"></span> ← Назад к VPM</a>
+    <a href="#glossary"><span class="dot" style="background:var(--text-muted)"></span> Базовые понятия</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Себестоимость</div>
+    <a href="#tech"><span class="dot" style="background:var(--accent-cyan)"></span> Технологии конкурентов</a>
+    <a href="#cost-api"><span class="dot" style="background:var(--accent-blue)"></span> Стоимость API-моделей</a>
+    <a href="#cost-gpu"><span class="dot" style="background:var(--accent-purple)"></span> Self-hosted GPU</a>
+    <a href="#cost-per-user"><span class="dot" style="background:var(--accent-green)"></span> COGS на пользователя</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Доходы</div>
+    <a href="#pricing"><span class="dot" style="background:var(--accent-orange)"></span> Тарифы</a>
+    <a href="#pricing-vs"><span class="dot" style="background:var(--accent-orange)"></span> vs Конкуренты</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Метрики</div>
+    <a href="#metrics"><span class="dot" style="background:var(--accent-green)"></span> Юнит-метрики</a>
+    <a href="#scenarios"><span class="dot" style="background:var(--accent-pink)"></span> Сценарии</a>
+    <a href="#pnl"><span class="dot" style="background:var(--accent-green)"></span> P&L 12 месяцев</a>
+    <a href="#charts"><span class="dot" style="background:var(--accent-cyan)"></span> Графики</a>
+    <a href="#opex"><span class="dot" style="background:var(--accent-orange)"></span> Расходы и маркетинг</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Выводы</div>
+    <a href="#sensitivity"><span class="dot" style="background:var(--accent-red)"></span> Чувствительность</a>
+    <a href="#benchmarks"><span class="dot" style="background:var(--accent-cyan)"></span> Бенчмарки</a>
+    <a href="#conclusions"><span class="dot" style="background:var(--accent-green)"></span> Выводы</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Инструменты</div>
+    <a href="calculator.html" style="color:var(--accent-orange)"><span class="dot" style="background:var(--accent-orange)"></span> Калькулятор</a>
+  </div>
+</nav>
+
+<div class="main">
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Юнит-экономика CorpusView</h1>
+  <p class="subtitle">Детальный расчёт себестоимости, тарифов, метрик и прогноза на 12 месяцев. Курс: 1 USD ≈ 92 RUB. Ревизия v2 — с эквайрингом, налогами, реалистичным CAC.</p>
+</div>
+
+<!-- Глоссарий базовых понятий -->
+<div id="glossary" class="vpm-card" style="margin-bottom:48px;scroll-margin-top:32px">
+  <div class="vpm-card-header" style="color:var(--text-muted)">Базовые понятия · если не знакомы с терминами</div>
+  <div class="vpm-card-body">
+    <div class="grid-2">
+      <div class="cell">
+        <div class="cell-label" style="color:var(--accent-cyan)">Технологии</div>
+        <div class="cell-content" style="font-size:13px;line-height:1.9">
+          <p><strong>Self-hosted</strong> — модель AI запущена на собственном или арендованном сервере. Полный контроль, не зависим от чужих сервисов.</p>
+          <p><strong>API</strong> — обращение к внешнему сервису. Отправляем фото → получаем результат. Оплата за каждый запрос.</p>
+          <p><strong>GPU</strong> — графический процессор (видеокарта) для AI-вычислений.</p>
+          <p><strong>VRAM</strong> — видеопамять GPU, необходимая для запуска модели.</p>
+          <p><strong>ControlNet</strong> — технология, которая сохраняет геометрию комнаты (стены, окна, двери) при генерации новой мебели. Без неё AI может «переставить» стены.</p>
+          <p><strong>Inpainting</strong> — замена конкретной области фото. Например: выделить зону кухни → заменить на новый гарнитур, оставив остальное без изменений.</p>
+          <p><strong>img2img</strong> — генерация нового изображения на основе входного фото. Загружаем фото комнаты → получаем фото комнаты с мебелью.</p>
+        </div>
+      </div>
+      <div class="cell">
+        <div class="cell-label" style="color:var(--accent-orange)">Бизнес-метрики</div>
+        <div class="cell-content" style="font-size:13px;line-height:1.9">
+          <p><strong>COGS</strong> (Cost of Goods Sold) — себестоимость. Сколько стоит обслужить одного пользователя: генерация AI, хранение фото, серверы.</p>
+          <p><strong>Gross Margin</strong> — валовая маржа. Какой % от выручки остаётся после вычета себестоимости. 96% = из 100 ₽ выручки 96 ₽ — прибыль.</p>
+          <p><strong>CAC</strong> (Customer Acquisition Cost) — сколько стоит привлечь одного пользователя (реклама, маркетинг).</p>
+          <p><strong>LTV</strong> (Lifetime Value) — сколько денег приносит один пользователь за всё время использования.</p>
+          <p><strong>LTV/CAC</strong> — отношение дохода к стоимости привлечения. Если >3 — бизнес здоровый. Если <1 — каждый клиент убыточен.</p>
+          <p><strong>ARPU / ARPPU</strong> — средний доход на пользователя (ARPU — на всех, включая бесплатных; ARPPU — только на платящих).</p>
+          <p><strong>MAU</strong> — месячные активные пользователи.</p>
+          <p><strong>MRR</strong> — ежемесячная повторяющаяся выручка (подписки).</p>
+          <p><strong>P&L</strong> — отчёт о прибылях и убытках.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ключевые числа наверху -->
+<div class="grid-3" style="margin-bottom:48px">
+  <div class="metric-card"><div class="metric-label">Себестоимость генерации</div><div class="big-num" style="color:var(--accent-green)">0.07 ₽</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">self-hosted (3.7 ₽ через API)</div></div>
+  <div class="metric-card"><div class="metric-label">Gross Margin</div><div class="big-num" style="color:var(--accent-green)">92%</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">self-hosted (69% через API), вкл. эквайринг 3%</div></div>
+  <div class="metric-card"><div class="metric-label">Год · накопленная прибыль</div><div class="big-num" style="color:var(--accent-green)">12.2M ₽</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">базовый сценарий (79% от B2B)</div></div>
+</div>
+
+<!-- ========== 1. ТЕХНОЛОГИИ КОНКУРЕНТОВ ========== -->
+<div class="section" id="tech">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-cyan)"></span>
+    <h2>Что используют конкуренты</h2>
+  </div>
+
+  <div class="one-liner">
+    <div style="font-size:16px;font-weight:600">90% сервисов визуализации интерьеров = SDXL + ControlNet + LoRA</div>
+    <div style="font-size:14px;color:var(--text-muted);margin-top:8px">Подтверждено: кейс «Самолёт» (Habr), Interior AI (Pieter Levels), RoomGPT.io (open source). Российские сервисы не раскрывают стек, но по функционалу — та же архитектура.</div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-cyan)">Pipeline визуализации кухни</div>
+    <div class="vpm-card-body">
+      <div style="font-family:monospace;font-size:13px;line-height:2;color:var(--accent-green)">
+        Фото помещения<br>
+        &nbsp;&nbsp;→ ControlNet (сохранение геометрии стен, окон, дверей)<br>
+        &nbsp;&nbsp;→ SDXL img2img + LoRA-стиль (минимализм, классика, лофт...)<br>
+        &nbsp;&nbsp;→ [Опционально] Inpainting (замена конкретной зоны)<br>
+        &nbsp;&nbsp;→ [Опционально] Upscaler (Real-ESRGAN)<br>
+        &nbsp;&nbsp;→ Результат
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-cyan)">Российские сервисы</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Сервис</th><th>Модель (оценка)</th><th>Hosting</th><th>Цена пользователю</th><th>Оценка себестоимости</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">RoomGPT.ru</td><td>SDXL + ControlNet</td><td>Self-hosted</td><td>17–33 ₽/генерация</td><td>~1–3 ₽</td></tr>
+          <tr><td style="font-weight:600">ReRoom.ai</td><td>SD + ControlNet + Inpainting</td><td>Self-hosted</td><td>$25/мес безлимит</td><td>~1–3 ₽</td></tr>
+          <tr><td style="font-weight:600">komnata.ai</td><td>Не раскрыто (SDXL-based)</td><td>Не раскрыто</td><td>Free + платно</td><td>~1–3 ₽</td></tr>
+          <tr><td style="font-weight:600">НейроХолст</td><td>Мультимодельная (SD/SDXL)</td><td>Self-hosted</td><td>Кредиты (СБП)</td><td>~1–3 ₽</td></tr>
+          <tr><td style="font-weight:600">DomVisor</td><td>«DomvisorGPT»</td><td>Self-hosted</td><td>Бесплатно (базовый)</td><td>~1–3 ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-cyan)">Зарубежные (с раскрытым стеком)</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Сервис</th><th>Модель</th><th>Hosting</th><th>Себестоимость</th><th>MRR</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">Interior AI</td><td>SDXL + ControlNet + DreamBooth + LoRA</td><td>Replicate API</td><td style="color:var(--accent-green)">$0.01/рендер ($200/мес на 21K)</td><td style="color:var(--accent-green)">$45K</td></tr>
+          <tr><td style="font-weight:600">RoomGPT.io</td><td>ControlNet (open source)</td><td>Replicate API</td><td>$0.01–0.05/рендер</td><td>$15–30K (оценка)</td></tr>
+          <tr><td style="font-weight:600">Collov.ai</td><td>Собственная DiT-архитектура</td><td>Self-hosted + Qualcomm NPU</td><td>Не раскрыто</td><td>$50–100K (оценка)</td></tr>
+          <tr><td style="font-weight:600">HomeDesigns.ai</td><td>Proprietary</td><td>Self-hosted</td><td>Не раскрыто</td><td>$30–80K (оценка)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Модели для self-hosted -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Модели для self-hosted: полная картина (img2img + ControlNet + Inpainting)</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Модель</th><th>Страна</th><th>Параметры</th><th>img2img</th><th>ControlNet</th><th>Inpainting</th><th>Лицензия</th><th>VRAM</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600;color:var(--accent-green)">FLUX.2 [klein] 4B</td><td>Германия</td><td>4B</td><td>Да</td><td>Развив.</td><td>Развив.</td><td style="color:var(--accent-green)">Apache 2.0</td><td>~13 GB</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600;color:var(--accent-green)">Kandinsky 2.2</td><td>Россия</td><td>~3B</td><td>Да</td><td style="color:var(--accent-green)">Да (Canny, Depth)</td><td>Да</td><td style="color:var(--accent-green)">Apache 2.0</td><td>~12 GB</td></tr>
+          <tr><td style="font-weight:600">Qwen-Image 2.0</td><td>Китай (Alibaba)</td><td>7B</td><td>Да</td><td>Да*</td><td>Да</td><td style="color:var(--accent-green)">Открытая</td><td>~24 GB</td></tr>
+          <tr><td style="font-weight:600">SD 3.5 Large</td><td>UK</td><td>8B</td><td>Да</td><td style="color:var(--accent-green)">Да (Blur, Canny, Depth)</td><td>Да</td><td>&lt;$1M free</td><td>~24 GB</td></tr>
+          <tr><td style="font-weight:600">BAGEL</td><td>Китай (ByteDance)</td><td>7B/14B MoT</td><td>Да</td><td>Нет</td><td>Editing</td><td style="color:var(--accent-green)">Apache 2.0</td><td>~24-32 GB</td></tr>
+          <tr><td style="font-weight:600">Kandinsky 5.0 Lite</td><td>Россия</td><td>6B DiT</td><td>Да</td><td>Не подтв.</td><td>Editing</td><td style="color:var(--accent-green)">Apache 2.0</td><td>~16-24 GB</td></tr>
+          <tr><td style="font-weight:600">FLUX.1 [schnell]</td><td>Германия</td><td>12B</td><td>Да</td><td>Частично</td><td>Да</td><td style="color:var(--accent-green)">Apache 2.0</td><td>~24 GB</td></tr>
+          <tr><td style="font-weight:600">FLUX.2 [dev]</td><td>Германия</td><td>12B</td><td>Да</td><td style="color:var(--accent-green)">Да (Union Pro 2.0)</td><td>Да</td><td style="color:var(--accent-red)">Non-Comm!</td><td>~24 GB</td></tr>
+          <tr><td style="font-weight:600">Kolors</td><td>Китай (Kuaishou)</td><td>—</td><td>Да</td><td>Community</td><td>Нет</td><td>Apache 2.0*</td><td>~16 GB</td></tr>
+          <tr><td style="font-weight:600">CogView-4</td><td>Китай (Zhipu AI)</td><td>6B</td><td>Огр.</td><td>Нет</td><td>Нет</td><td style="color:var(--accent-green)">MIT</td><td>~16 GB</td></tr>
+          <tr><td style="font-weight:600">Chroma</td><td>Open Source</td><td>8.9B</td><td>Да</td><td>Нет</td><td>Нет</td><td style="color:var(--accent-green)">Apache 2.0</td><td>~24 GB</td></tr>
+          <tr><td style="font-weight:600;color:var(--text-muted)">HunyuanImage 3.0</td><td>Китай (Tencent)</td><td>80B MoE</td><td>Да</td><td>Нет</td><td>API</td><td>Tencent CL</td><td style="color:var(--accent-red)">~178 GB!</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11px;color:var(--text-muted)">
+        DiT — Diffusion Transformer. MoT — Mixture of Tokens. MoE — Mixture of Experts. VRAM — видеопамять GPU, необходимая для запуска.<br>
+        *Kolors: Apache 2.0 для кода, коммерческая лицензия требует регистрации. *Qwen-Image: ControlNet через Qwen2.5-VL vision encoder.
+      </div>
+    </div>
+  </div>
+
+  <!-- Что НЕ подходит -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-red)">Что НЕ подходит для нашей задачи</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Модель</th><th>Почему не подходит</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">YandexART</td><td>Нет img2img, нет inpainting, нет ControlNet — только text-to-image</td></tr>
+          <tr><td style="font-weight:600">DeepSeek Janus Pro</td><td>Нет pixel-level editing — генерирует autoregressive, не редактирует фото</td></tr>
+          <tr><td style="font-weight:600">GigaChat (Сбер)</td><td>Нет прямого img2img с маской — Kandinsky встроен, но без ControlNet</td></tr>
+          <tr><td style="font-weight:600">OpenAI GPT Image</td><td style="color:var(--accent-red)">Заблокировано в РФ — Россия не в списке стран</td></tr>
+          <tr><td style="font-weight:600">Google Gemini / Imagen</td><td style="color:var(--accent-red)">Заблокировано в РФ — Google AI API не работает</td></tr>
+          <tr><td style="font-weight:600">HunyuanImage 3.0</td><td>178 GB VRAM — невозможно запустить без кластера GPU</td></tr>
+          <tr><td style="font-weight:600">PixArt-Sigma</td><td>Лицензия только для исследований — нельзя коммерчески</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11px;color:var(--text-muted)">
+        img2img — генерация нового изображения на основе входного фото. ControlNet — сохранение геометрии (стены, окна, двери) при генерации. Inpainting — замена конкретной области изображения.
+      </div>
+    </div>
+  </div>
+
+  <!-- Рекомендуемый стек -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Рекомендуемый стек для CorpusView</div>
+    <div class="vpm-card-body">
+      <div class="grid-3">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-green)">Основной движок</div>
+          <div class="cell-content"><strong>FLUX.2 [klein] 4B</strong><br>Apache 2.0, бесплатно<br>13 GB VRAM (RTX 4090)<br>+ ControlNet для геометрии</div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-blue)">Российский fallback</div>
+          <div class="cell-content"><strong>Kandinsky 2.2 + ControlNet</strong><br>Apache 2.0, бесплатно<br>12 GB VRAM<br>Canny + Depth контроль</div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-orange)">API backup</div>
+          <div class="cell-content"><strong>Fusion Brain API</strong><br>~$29/мес (Сбер)<br>Для пиковых нагрузок<br>Полная доступность из РФ</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text-muted)">
+        <strong>Pipeline:</strong> Фото комнаты → Depth Estimation → ControlNet (сохраняем геометрию) → Inpainting (заменяем область кухни) → Img2Img refinement → Результат
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 2. СТОИМОСТЬ API ========== -->
+<div class="section" id="cost-api">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-blue)"></span>
+    <h2>Стоимость API-моделей</h2>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-blue)">Image-to-Image модели (цена за 1 генерацию)</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Провайдер</th><th>Модель</th><th>$/генерация</th><th>₽/генерация</th><th>Разрешение</th><th>Время</th><th>Inpainting</th></tr></thead>
+        <tbody>
+          <tr><td>Stability AI</td><td>SDXL</td><td>$0.003–0.006</td><td>0.3–0.6 ₽</td><td>1024x1024</td><td>3–8 сек</td><td>Да</td></tr>
+          <tr><td>Stability AI</td><td>Stable Image Ultra</td><td>$0.08</td><td>7.4 ₽</td><td>2048x2048</td><td>8–15 сек</td><td>Да</td></tr>
+          <tr><td>Black Forest Labs</td><td>Flux 1.1 Pro</td><td>$0.04</td><td>3.7 ₽</td><td>1024x1024</td><td>3–6 сек</td><td>Да</td></tr>
+          <tr><td>Black Forest Labs</td><td>Flux 2 Pro</td><td>$0.055</td><td>5.1 ₽</td><td>2048x2048</td><td>5–10 сек</td><td>Да</td></tr>
+          <tr><td>fal.ai</td><td>Flux Dev</td><td>$0.025</td><td>2.3 ₽</td><td>1024x1024</td><td>3–5 сек</td><td>Да</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">OpenAI</td><td style="font-weight:600">GPT Image 1 Mini (low)</td><td style="font-weight:600;color:var(--accent-green)">$0.005</td><td style="color:var(--accent-green)">0.5 ₽</td><td>1024x1024</td><td>5–15 сек</td><td>Да</td></tr>
+          <tr><td>OpenAI</td><td>GPT Image 1.5</td><td>$0.04</td><td>3.7 ₽</td><td>1024x1024</td><td>10–20 сек</td><td>Да</td></tr>
+          <tr><td>Google</td><td>Imagen 4</td><td>$0.02–0.06</td><td>1.8–5.5 ₽</td><td>2048x2048</td><td>5–10 сек</td><td>Да</td></tr>
+          <tr><td>Replicate</td><td>SDXL</td><td>$0.012</td><td>1.1 ₽</td><td>1024x1024</td><td>5–15 сек*</td><td>Да</td></tr>
+          <tr><td>Together AI</td><td>Flux Schnell</td><td>~$0.003</td><td>0.3 ₽</td><td>1024x1024</td><td>2–5 сек</td><td>Огр.</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:8px 14px;font-size:11px;color:var(--text-muted)">*Replicate: включает cold-start $0.02–0.08 при первом запросе.<br>
+        SDXL — Stable Diffusion XL. Inpainting — замена конкретной области изображения. img2img — генерация нового изображения на основе входного фото. SD — Stable Diffusion.</div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-orange)">Российские и китайские модели</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Модель</th><th>Страна</th><th>img2img</th><th>ControlNet</th><th>Лицензия</th><th>Цена API</th><th>Для нас</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">Kandinsky 2.2</td><td>Россия</td><td>Да</td><td style="color:var(--accent-green)">Да</td><td style="color:var(--accent-green)">Apache 2.0</td><td>Self-hosted бесплатно</td><td style="color:var(--accent-green)">Подходит</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Kandinsky 5.0 Lite</td><td>Россия</td><td>Да</td><td>Не подтв.</td><td style="color:var(--accent-green)">Apache 2.0</td><td>Fusion Brain ~$29/мес</td><td style="color:var(--accent-green)">Подходит</td></tr>
+          <tr><td style="font-weight:600">Kandinsky 6.0</td><td>Россия</td><td>Да</td><td>Нет</td><td style="color:var(--accent-red)">Некомм.!</td><td>2.3–2.5 ₽/генер.</td><td style="color:var(--accent-red)">Нет (лицензия)</td></tr>
+          <tr><td style="font-weight:600">YandexART 2.5</td><td>Россия</td><td style="color:var(--accent-red)">Нет</td><td style="color:var(--accent-red)">Нет</td><td>Коммерч. (Cloud)</td><td>~$0.018/запрос</td><td style="color:var(--accent-red)">Нет (нет img2img)</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Qwen-Image 2.0</td><td>Китай</td><td>Да</td><td>Да*</td><td style="color:var(--accent-green)">Открытая</td><td>DashScope API</td><td style="color:var(--accent-green)">Подходит (self-hosted)</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">BAGEL</td><td>Китай</td><td>Да</td><td>Нет</td><td style="color:var(--accent-green)">Apache 2.0</td><td>Self-hosted бесплатно</td><td style="color:var(--accent-orange)">Editing, без ControlNet</td></tr>
+          <tr><td style="font-weight:600">CogView-4</td><td>Китай</td><td>Огр.</td><td>Нет</td><td style="color:var(--accent-green)">MIT</td><td>~$0.015/img</td><td style="color:var(--accent-red)">Нет ControlNet</td></tr>
+          <tr><td style="font-weight:600">DeepSeek Janus</td><td>Китай</td><td style="color:var(--accent-red)">Нет</td><td style="color:var(--accent-red)">Нет</td><td>MIT</td><td>Self-hosted</td><td style="color:var(--accent-red)">Нет pixel editing</td></tr>
+          <tr><td style="font-weight:600">Kolors</td><td>Китай</td><td>Да</td><td>Community</td><td>Apache 2.0*</td><td>Self-hosted</td><td style="color:var(--accent-orange)">Возможен</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11px;color:var(--text-muted)">
+        <strong>Важно:</strong> Kandinsky 2.2 и 5.0 — Apache 2.0 (коммерческое использование разрешено). Kandinsky 6.0 — некоммерческая лицензия. YandexART — нет img2img вообще.<br>
+        *Qwen-Image: ControlNet через Qwen2.5-VL vision encoder. *Kolors: коммерческая лицензия требует регистрации.<br>
+        API — программный интерфейс для обращения к модели. Self-hosted — запуск модели на собственном/арендованном сервере.
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-blue)">Рекомендация по выбору</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Сценарий</th><th>Модель</th><th>Цена</th><th>Почему</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">MVP / тестирование</td><td>GPT Image 1 Mini (low)</td><td style="color:var(--accent-green)">$0.005 (0.5 ₽)</td><td>Дешевле всех, приемлемое качество</td></tr>
+          <tr><td style="font-weight:600">Баланс цена/качество</td><td>Flux 1.1 Pro через fal.ai</td><td>$0.025–0.04 (2.3–3.7 ₽)</td><td>Высокое качество, быстро, img2img</td></tr>
+          <tr><td style="font-weight:600">Максимальное качество</td><td>GPT Image 1.5 / Imagen 4</td><td>$0.04–0.06 (3.7–5.5 ₽)</td><td>Фотореалистичность</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600;color:var(--accent-green)">Self-hosted (масштаб)</td><td>SDXL / Flux Schnell</td><td style="color:var(--accent-green)">$0.001–0.003 (0.05–0.3 ₽)</td><td>Контроль, нет лимитов, экономия 50x</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 3. SELF-HOSTED GPU ========== -->
+<div class="section" id="cost-gpu">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-purple)"></span>
+    <h2>Self-hosted GPU</h2>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-purple)">GPU-провайдеры</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Провайдер</th><th>GPU</th><th>$/час</th><th>SDXL img/час</th><th>$/генерация</th><th>₽/генерация</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">Vast.ai</td><td>RTX 4090</td><td>$0.40</td><td>~800</td><td style="color:var(--accent-green);font-weight:600">$0.0005</td><td style="color:var(--accent-green);font-weight:600">0.05 ₽</td></tr>
+          <tr><td>RunPod</td><td>A100 80GB</td><td>$1.99</td><td>~1200</td><td>$0.0017</td><td>0.15 ₽</td></tr>
+          <tr><td>RunPod</td><td>H100</td><td>$2.49</td><td>~1800</td><td>$0.0014</td><td>0.13 ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-purple)">Российские GPU-провайдеры</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Провайдер</th><th>GPU</th><th>₽/час</th><th>₽/мес (24/7)</th><th>₽/генерация</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">Рег.облако</td><td>A100 80GB</td><td>88 ₽</td><td>63 360 ₽</td><td style="color:var(--accent-green)">0.07 ₽</td></tr>
+          <tr><td>Рег.облако</td><td>A5000 24GB</td><td>~35 ₽</td><td>~25 200 ₽</td><td>~0.06 ₽</td></tr>
+          <tr><td>Selectel</td><td>A100 40GB</td><td>~100 ₽</td><td>~72 000 ₽</td><td>~0.08 ₽</td></tr>
+          <tr><td>HOSTKEY</td><td>T4</td><td>~10 ₽</td><td>~7 200 ₽</td><td>~0.05 ₽ (медленно)</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:8px 14px;font-size:11px;color:var(--text-muted)">GPU — графический процессор для ускорения AI-вычислений. VRAM — видеопамять GPU. RTX 4090, A100, H100, A5000, T4 — модели видеокарт NVIDIA разной производительности и цены. 24/7 — круглосуточная аренда.</div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-purple)">Точка перехода API → Self-hosted</div>
+    <div class="vpm-card-body">
+      <div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-blue)">API (Flux $0.04)</div><div class="cell-content">Линейно растёт с объёмом.<br>10K генераций = 37 000 ₽<br>100K = 370 000 ₽<br>500K = 1 850 000 ₽</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-green)">Self-hosted (A100)</div><div class="cell-content">Фиксированная стоимость.<br>10K = 63 360 ₽ (переплата)<br>100K = 63 360 ₽ (экономия 6x)<br>500K = 126 720 ₽ (экономия 15x)</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Breakeven</div><div class="cell-content"><span style="font-size:20px;font-weight:700;color:var(--accent-orange)">~50 000</span><br>генераций/мес<br>(~2 500 MAU)</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 4. COGS НА ПОЛЬЗОВАТЕЛЯ ========== -->
+<div class="section" id="cost-per-user">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-green)"></span>
+    <h2>COGS на пользователя</h2>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Среднее потребление по сегментам</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Сегмент</th><th>Сессий/мес</th><th>Генераций/сессию</th><th>Генераций/мес</th><th>COGS (API 3.7₽)</th><th>COGS (self-hosted 0.07₽)</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">P1 Дизайнер</td><td>20</td><td>10</td><td>200</td><td>740 ₽</td><td style="color:var(--accent-green)">14 ₽</td></tr>
+          <tr><td style="font-weight:600">P2 Замерщик</td><td>15</td><td>5</td><td>75</td><td>278 ₽</td><td style="color:var(--accent-green)">5.3 ₽</td></tr>
+          <tr><td style="font-weight:600">P3 Компания (3 чел.)</td><td>45</td><td>5</td><td>225</td><td>833 ₽</td><td style="color:var(--accent-green)">15.8 ₽</td></tr>
+          <tr><td style="font-weight:600">C1 Фасады</td><td>4</td><td>5</td><td>20</td><td>74 ₽</td><td style="color:var(--accent-green)">1.4 ₽</td></tr>
+          <tr><td style="font-weight:600">C2 Новая кухня</td><td>6</td><td>8</td><td>48</td><td>178 ₽</td><td style="color:var(--accent-green)">3.4 ₽</td></tr>
+          <tr><td style="font-weight:600">C3 Дизайнеру</td><td>3</td><td>5</td><td>15</td><td>56 ₽</td><td style="color:var(--accent-green)">1.1 ₽</td></tr>
+          <tr><td style="font-weight:600">C4 Мечтаю</td><td>2</td><td>3</td><td>6</td><td>22 ₽</td><td style="color:var(--accent-green)">0.4 ₽</td></tr>
+          <tr><td style="font-weight:600">C5 Цены</td><td>3</td><td>4</td><td>12</td><td>44 ₽</td><td style="color:var(--accent-green)">0.8 ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Полная себестоимость за сессию (5 генераций)</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Статья</th><th>API (Flux)</th><th>Self-hosted (A100)</th></tr></thead>
+        <tbody>
+          <tr><td>5 генераций</td><td>5 × 3.7 ₽ = 18.5 ₽</td><td>5 × 0.07 ₽ = 0.35 ₽</td></tr>
+          <tr><td>CV (распознавание)</td><td>0.14 ₽</td><td>0 (self-hosted YOLO)</td></tr>
+          <tr><td>Хранение</td><td>~0.01 ₽</td><td>~0.01 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Итого за сессию</td><td style="font-weight:600">~19 ₽</td><td style="font-weight:600;color:var(--accent-green)">~0.4 ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 5. ТАРИФЫ ========== -->
+<div class="section" id="pricing">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-orange)"></span>
+    <h2>Тарифы (гипотеза)</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">B2C</div>
+      <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>Тариф</th><th>Цена</th><th>Генераций</th><th>Сегмент</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">Free</td><td>0 ₽</td><td>5/мес</td><td>C4</td></tr>
+            <tr><td style="font-weight:600">Базовый</td><td>299 ₽/мес</td><td>30</td><td>C3, C5</td></tr>
+            <tr><td style="font-weight:600">Стандарт</td><td>599 ₽/мес</td><td>80</td><td>C1, C2</td></tr>
+            <tr><td style="font-weight:600">Разовый</td><td>149 ₽</td><td>10</td><td>Один проект</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-purple)">B2B</div>
+      <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>Тариф</th><th>Цена</th><th>Генераций</th><th>Сегмент</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">Фрилансер</td><td>1 490 ₽/мес</td><td>300</td><td>P1</td></tr>
+            <tr><td style="font-weight:600">Команда</td><td>2 990 ₽/мес</td><td>500 (3 места)</td><td>P2+P3</td></tr>
+            <tr><td style="font-weight:600">Бизнес</td><td>5 990 ₽/мес</td><td>1 500 (10 мест)</td><td>P3</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 5B. VS КОНКУРЕНТЫ ========== -->
+<div class="section" id="pricing-vs">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-orange)"></span>
+    <h2>Сравнение цен с конкурентами</h2>
+  </div>
+  <div class="vpm-card">
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Конкурент</th><th>Их цена</th><th>Что получаешь</th><th>Наша цена</th><th>Что получаешь у нас</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">RoomGPT.ru</td><td>199 ₽ / 6 генераций</td><td>Абстрактная картинка</td><td style="color:var(--accent-green)">299 ₽ / 30 генераций</td><td>+ конфигуратор + рыночные цены</td></tr>
+          <tr><td style="font-weight:600">RoomGPT.ru Премиум</td><td>999 ₽ / 50 генераций</td><td>То же</td><td style="color:var(--accent-green)">599 ₽ / 80 генераций</td><td>+ больше функций, дешевле</td></tr>
+          <tr><td style="font-weight:600">ReRoom Pro</td><td>$25/мес (~2 300 ₽)</td><td>Безлимит абстракция</td><td style="color:var(--accent-green)">1 490 ₽ / 300</td><td>+ каталоги + шаблоны</td></tr>
+          <tr><td style="font-weight:600">Interior AI Pro</td><td>$39/мес (~3 600 ₽)</td><td>Дизайн комнат</td><td style="color:var(--accent-green)">2 990 ₽ / 500</td><td>+ команда + каталог компании</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 6. ЮНИТ-МЕТРИКИ ========== -->
+<div class="section" id="metrics">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-green)"></span>
+    <h2>Юнит-метрики (базовый сценарий, 6 мес)</h2>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:24px">
+    <div class="metric-card"><div class="metric-label">ARPPU B2C</div><div class="big-num">374 ₽</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">/мес</div></div>
+    <div class="metric-card"><div class="metric-label">ARPPU B2B</div><div class="big-num">2 690 ₽</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">/мес</div></div>
+    <div class="metric-card"><div class="metric-label">ARPU (все)</div><div class="big-num">271 ₽</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">/мес (вкл. Free) · ARPPU платящих: 1 180 ₽</div></div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Расчёт ARPPU</div>
+    <div class="vpm-card-body">
+      <div class="grid-2">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-blue)">B2C</div>
+          <div class="cell-content" style="font-size:13px">
+            <p>60% Базовый (299 ₽) = 179 ₽</p>
+            <p>30% Стандарт (599 ₽) = 180 ₽</p>
+            <p>10% Разовый (149 ₽) = 15 ₽</p>
+            <p style="font-weight:600;color:var(--accent-green)">Итого: 374 ₽/мес</p>
+          </div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-purple)">B2B</div>
+          <div class="cell-content" style="font-size:13px">
+            <p>50% Фрилансер (1 490 ₽) = 745 ₽</p>
+            <p>35% Команда (2 990 ₽) = 1 047 ₽</p>
+            <p>15% Бизнес (5 990 ₽) = 899 ₽</p>
+            <p style="font-weight:600;color:var(--accent-green)">Итого: 2 690 ₽/мес</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">CAC, LTV, Payback</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Метрика</th><th>B2C</th><th>B2B</th><th>Обоснование</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">CAC (per paying)</td><td>800 ₽</td><td>4 000 ₽</td><td>VK/Яндекс CPC ~25 ₽ + ~40% органики | Контент + прямые продажи + реферралы</td></tr>
+          <tr><td style="font-weight:600">Lifetime</td><td>4 мес</td><td>12 мес</td><td>Проектный характер | Рабочий инструмент</td></tr>
+          <tr><td style="font-weight:600">LTV</td><td>1 496 ₽</td><td>32 280 ₽</td><td>ARPPU × Lifetime</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">LTV/CAC</td><td style="font-weight:600;color:var(--accent-orange)">1.9</td><td style="font-weight:600;color:var(--accent-green)">8.1</td><td>B2C маргинальный (&lt;3) · B2B отличный · Blended: 6.4</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Payback</td><td style="font-weight:600;color:var(--accent-orange)">2.8 мес</td><td style="font-weight:600;color:var(--accent-green)">2.2 мес</td><td>B2C близок к lifetime (4 мес) — маргинальный</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Валовая маржа</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Фаза</th><th>Выручка/мес</th><th>COGS/мес</th><th>Gross Profit</th><th>Gross Margin</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">Phase 1 (API)</td><td>1 356 500 ₽</td><td>427 000 ₽</td><td>929 500 ₽</td><td style="font-weight:600">69%</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600;color:var(--accent-green)">Phase 2 (self-hosted)</td><td>1 356 500 ₽</td><td style="color:var(--accent-green)">106 400 ₽</td><td style="color:var(--accent-green)">1 250 100 ₽</td><td style="font-weight:600;color:var(--accent-green)">92%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text-muted);line-height:1.8">
+    <strong>Расшифровки:</strong>
+    MAU — Monthly Active Users (месячные активные пользователи).
+    ARPU — Average Revenue Per User (средний доход на пользователя, включая бесплатных).
+    ARPPU — Average Revenue Per Paying User (средний доход на платящего).
+    COGS — Cost of Goods Sold (себестоимость: затраты на генерацию, хранение, CDN).
+    CAC — Customer Acquisition Cost (стоимость привлечения одного пользователя).
+    LTV — Lifetime Value (суммарный доход с одного пользователя за всё время).
+    LTV/CAC — отношение ценности к стоимости привлечения (норма >3).
+    Payback — время окупаемости затрат на привлечение.
+    Gross Profit — валовая прибыль (выручка минус COGS).
+    Gross Margin — валовая маржа в % (Gross Profit / Выручка).
+    CPC — Cost Per Click (цена за клик в рекламе).
+    P&L — Profit and Loss (отчёт о прибылях и убытках).
+    MRR — Monthly Recurring Revenue (ежемесячная повторяющаяся выручка).
+  </div>
+</div>
+
+<!-- ========== 7. СЦЕНАРИИ ========== -->
+<div class="section" id="scenarios">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-pink)"></span>
+    <h2>Сценарии (6 мес после запуска)</h2>
+  </div>
+  <div class="vpm-card">
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Метрика</th><th style="color:var(--accent-red)">Пессимистичный</th><th style="color:var(--accent-green)">Базовый</th><th style="color:var(--accent-blue)">Оптимистичный</th></tr></thead>
+        <tbody>
+          <tr><td>MAU</td><td>1 500</td><td style="font-weight:600">5 000</td><td>15 000</td></tr>
+          <tr><td>Конверсия B2C</td><td>8%</td><td>15%</td><td>20%</td></tr>
+          <tr><td>Конверсия B2B</td><td>4%</td><td>8%</td><td>12%</td></tr>
+          <tr><td>Платящих (B2C / B2B)</td><td>120 / 60</td><td style="font-weight:600">750 / 400</td><td>3 000 / 1 800</td></tr>
+          <tr><td style="font-weight:600">Выручка/мес</td><td>125 300 ₽</td><td style="font-weight:600">1 356 500 ₽</td><td style="color:var(--accent-green)">7 650 000 ₽</td></tr>
+          <tr><td>COGS (API)</td><td>63 700 ₽</td><td>427 000 ₽</td><td>1 672 000 ₽</td></tr>
+          <tr><td>COGS (self-hosted)</td><td style="color:var(--accent-red)">69 400 ₽ (дороже API!)</td><td>106 400 ₽</td><td>358 500 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">GP (API)</td><td style="color:var(--accent-orange)">61 600 ₽</td><td style="font-weight:600;color:var(--accent-green)">929 500 ₽</td><td style="color:var(--accent-green)">5 978 000 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">GP (self-hosted)</td><td style="color:var(--accent-orange)">55 900 ₽</td><td style="font-weight:600;color:var(--accent-green)">1 250 100 ₽</td><td style="color:var(--accent-green)">7 291 500 ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 8. P&L ========== -->
+<div class="section" id="pnl">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-green)"></span>
+    <h2>P&L · 12 месяцев (базовый)</h2>
+  </div>
+  <div class="vpm-card">
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table style="font-size:12px">
+        <thead><tr><th>Мес</th><th>MAU</th><th>Плат.</th><th>B2C/B2B</th><th>Выручка</th><th>COGS</th><th>Налог 6%</th><th>Пост.</th><th>Прибыль</th><th>Накоп.</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>300</td><td>24</td><td>19/5</td><td>20 600 ₽</td><td>12 100 ₽</td><td>1 200 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-red)">-353 200 ₽</td><td style="color:var(--accent-red)">-353 200 ₽</td></tr>
+          <tr><td>2</td><td>700</td><td>70</td><td>56/14</td><td>58 600 ₽</td><td>31 000 ₽</td><td>3 500 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-red)">-336 400 ₽</td><td style="color:var(--accent-red)">-689 600 ₽</td></tr>
+          <tr><td>3</td><td>1 200</td><td>156</td><td>117/39</td><td>148 700 ₽</td><td>62 100 ₽</td><td>8 900 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-red)">-282 800 ₽</td><td style="color:var(--accent-red)">-972 400 ₽</td></tr>
+          <tr><td>4</td><td>2 000</td><td>320</td><td>240/80</td><td>305 000 ₽</td><td>126 700 ₽</td><td>18 300 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-red)">-200 500 ₽</td><td style="color:var(--accent-red)">-1 172 900 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">5</td><td>3 500</td><td>665</td><td>466/199</td><td>709 600 ₽</td><td>265 500 ₽</td><td>42 600 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green);font-weight:600">+41 000 ₽</td><td style="color:var(--accent-red)">-1 131 900 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">6</td><td>5 000</td><td>1 150</td><td>750/400</td><td>1 356 500 ₽</td><td>427 000 ₽</td><td>81 400 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green);font-weight:600">+487 600 ₽</td><td style="color:var(--accent-red)">-644 300 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">7*</td><td>6 500</td><td>1 495</td><td>972/523</td><td>1 770 400 ₽</td><td style="color:var(--accent-green)">118 800 ₽</td><td>106 200 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green);font-weight:600">+1 184 900 ₽</td><td style="color:var(--accent-green);font-weight:600">+540 600 ₽</td></tr>
+          <tr><td>8</td><td>8 000</td><td>1 840</td><td>1196/644</td><td>2 179 700 ₽</td><td style="color:var(--accent-green)">131 100 ₽</td><td>130 800 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green)">+1 557 300 ₽</td><td style="color:var(--accent-green)">+2 097 900 ₽</td></tr>
+          <tr><td>9</td><td>9 500</td><td>2 185</td><td>1420/765</td><td>2 588 900 ₽</td><td>143 300 ₽</td><td>155 300 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green)">+1 929 800 ₽</td><td style="color:var(--accent-green)">+4 027 700 ₽</td></tr>
+          <tr><td>10</td><td>11 000</td><td>2 530</td><td>1645/886</td><td>2 998 600 ₽</td><td>155 600 ₽</td><td>179 900 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green)">+2 302 600 ₽</td><td style="color:var(--accent-green)">+6 330 300 ₽</td></tr>
+          <tr><td>11</td><td>12 500</td><td>2 875</td><td>1869/1006</td><td>3 405 100 ₽</td><td>167 800 ₽</td><td>204 300 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green)">+2 672 500 ₽</td><td style="color:var(--accent-green)">+9 002 800 ₽</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">12**</td><td style="font-weight:600">15 000</td><td style="font-weight:600">3 450</td><td>2243/1208</td><td style="font-weight:600">4 088 400 ₽</td><td>251 700 ₽</td><td>245 300 ₽</td><td>360 500 ₽</td><td style="color:var(--accent-green);font-weight:600">+3 230 900 ₽</td><td style="color:var(--accent-green);font-weight:700;font-size:14px">+12 233 700 ₽</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11px;color:var(--text-muted)">
+        * Месяц 7: переход на self-hosted GPU — COGS падает с 427K до 119K. ** Месяц 12: 2-й GPU.
+        <br>COGS вкл. AI-генерацию, CV, эквайринг 3%, инфра. Налог: УСН 6% «доходы».
+        <br>Постоянные: команда 300K + маркетинг 50K + бухгалтерия 5K + прочее 5.5K = 360.5K ₽/мес.
+        <br><strong style="color:var(--accent-orange)">79% выручки — от B2B.</strong> B2B ARPPU (2 690 ₽) в 7 раз выше B2C (374 ₽).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ГРАФИКИ ========== -->
+<div class="section" id="charts">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-cyan)"></span>
+    <h2>Графики</h2>
+  </div>
+
+  <!-- 1. P&L 12 месяцев -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">P&L · 12 месяцев (базовый сценарий)</div>
+    <div class="vpm-card-body">
+      <div class="chart-container"><canvas id="chartPnL"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 2. API vs Self-hosted -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-purple)">API vs Self-hosted · точка перехода</div>
+    <div class="vpm-card-body">
+      <div class="chart-container"><canvas id="chartBreakeven"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 3. Структура расходов -->
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-orange)">Структура расходов · Phase 1 (API)</div>
+      <div class="vpm-card-body">
+        <div class="chart-container"><canvas id="chartCostAPI"></canvas></div>
+      </div>
+    </div>
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-green)">Структура расходов · Phase 2 (Self-hosted)</div>
+      <div class="vpm-card-body">
+        <div class="chart-container"><canvas id="chartCostSH"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Воронка пользователей -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-blue)">Воронка пользователей (базовый, 6 мес)</div>
+    <div class="vpm-card-body">
+      <div class="chart-container"><canvas id="chartFunnel"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 5. Себестоимость моделей -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-cyan)">Себестоимость 1 генерации · сравнение моделей (₽)</div>
+    <div class="vpm-card-body">
+      <div class="chart-container"><canvas id="chartModels"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 8B. ПОСТОЯННЫЕ РАСХОДЫ ========== -->
+<div class="section" id="opex">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-orange)"></span>
+    <h2>Постоянные расходы (без COGS)</h2>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-orange)">Структура постоянных расходов</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Статья</th><th>Минимум/мес</th><th>Средний/мес</th><th>Примечания</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">Разработка</td><td>300 000 ₽</td><td>500 000 ₽</td><td>1 fullstack + 1 ML (или основатель сам: 0, но opportunity cost ~150–300K)</td></tr>
+          <tr><td style="font-weight:600">Маркетинг</td><td>50 000 ₽</td><td>200 000 ₽</td><td>Таргет VK/Яндекс + контент-маркетинг + SEO</td></tr>
+          <tr><td style="font-weight:600">Домен, SSL, почта</td><td>500 ₽</td><td>500 ₽</td><td></td></tr>
+          <tr><td style="font-weight:600">Сервисы</td><td>5 000 ₽</td><td>15 000 ₽</td><td>Аналитика, мониторинг, ошибки, рассылки</td></tr>
+          <tr><td style="font-weight:600">Саппорт</td><td>0 ₽</td><td>30 000 ₽</td><td>Мессенджеры, чат-бот, FAQ</td></tr>
+          <tr><td style="font-weight:600">Бухгалтерия, юр.</td><td>5 000 ₽</td><td>15 000 ₽</td><td>Аутсорс</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Итого (основатель сам)</td><td style="font-weight:600;color:var(--accent-green)">60 500 ₽</td><td></td><td>Без зарплаты, мин. маркетинг</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Итого (с командой)</td><td style="font-weight:600">360 500 ₽</td><td></td><td>Минимальная команда + мин. маркетинг</td></tr>
+          <tr class="highlight-row"><td style="font-weight:600">Итого (полная)</td><td></td><td style="font-weight:600;color:var(--accent-orange)">760 500 ₽</td><td>Команда + активный маркетинг + саппорт</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-orange)">Расходы на маркетинг (детально)</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Канал</th><th>Бюджет/мес</th><th>CPC</th><th>Конверсия</th><th>CAC</th><th>Новых пользователей</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">Яндекс Директ</td><td>30 000–80 000 ₽</td><td>~15–25 ₽</td><td>~5–7%</td><td>~250–500 ₽</td><td>~60–320</td></tr>
+          <tr><td style="font-weight:600">VK Ads</td><td>20 000–60 000 ₽</td><td>~8–15 ₽</td><td>~5–10%</td><td>~80–300 ₽</td><td>~70–750</td></tr>
+          <tr><td style="font-weight:600">Telegram Ads</td><td>10 000–30 000 ₽</td><td>~5–10 ₽</td><td>~3–5%</td><td>~100–330 ₽</td><td>~30–300</td></tr>
+          <tr><td style="font-weight:600">Контент (vc.ru, Habr, блог)</td><td>0–30 000 ₽</td><td>—</td><td>—</td><td>~50–150 ₽</td><td>Органика, долгосрочно</td></tr>
+          <tr><td style="font-weight:600">SEO</td><td>0–10 000 ₽</td><td>—</td><td>—</td><td>~0 (орг. трафик)</td><td>Растёт от 3-6 мес</td></tr>
+          <tr><td style="font-weight:600">B2B прямые продажи</td><td>0 (время основателя)</td><td>—</td><td>—</td><td>~3 000 ₽</td><td>5–15 компаний/мес</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11px;color:var(--text-muted)">
+        CPC — Cost Per Click (цена за клик). CAC — Customer Acquisition Cost (стоимость привлечения пользователя). Конверсия — % посетителей, ставших пользователями.<br>
+        Целевые запросы: «дизайн кухни», «визуализация кухни», «конструктор кухни», «кухня на заказ цена», «замена фасадов кухни».
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Точка безубыточности</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Сценарий</th><th>Постоянные расходы</th><th>Нужна выручка/мес</th><th>Нужно платящих</th><th>MAU (при 23%)</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">Основатель сам</td><td>60 500 ₽</td><td style="color:var(--accent-green)">~61 000 ₽</td><td style="color:var(--accent-green);font-weight:600">~82</td><td>~360</td></tr>
+          <tr><td style="font-weight:600">Команда (1 fullstack + 1 ML)</td><td>360 500 ₽</td><td>~362 000 ₽</td><td style="font-weight:600">~489</td><td>~2 130</td></tr>
+          <tr><td style="font-weight:600">Полная (команда + маркетинг + саппорт)</td><td>760 500 ₽</td><td>~763 000 ₽</td><td style="font-weight:600">~1 031</td><td>~4 480</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11px;color:var(--text-muted)">Расчёт при средневзв. ARPPU = 1 180 ₽ (B2C/B2B 65/35 микс), контрибуция на платящего: 738 ₽ (ARPPU − COGS − налог).</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 9. ЧУВСТВИТЕЛЬНОСТЬ ========== -->
+<div class="section" id="sensitivity">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-red)"></span>
+    <h2>Анализ чувствительности</h2>
+  </div>
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-red)">Что если...</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Фактор</th><th>Изменение</th><th>Влияние (прибыль мес 12)</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--accent-red);font-weight:600">B2B конверсия 0%</td><td>Нет B2B вообще</td><td style="color:var(--accent-red);font-weight:600">Убыток — B2C не покрывает постоянные!</td></tr>
+          <tr><td>B2B конверсия 4% вместо 8%</td><td>-50% B2B платящих</td><td style="color:var(--accent-orange)">~1 600 000 ₽ (всё ещё в плюсе)</td></tr>
+          <tr><td>B2C конверсия 8% вместо 15%</td><td>-47% B2C платящих</td><td style="color:var(--accent-green)">~2 800 000 ₽ (B2C — малая часть выручки)</td></tr>
+          <tr><td>ARPPU B2B ниже на 30%</td><td>B2B тарифы дешевле</td><td style="color:var(--accent-orange)">~2 250 000 ₽</td></tr>
+          <tr><td>API подорожали в 2 раза</td><td>COGS × 2 (при API)</td><td>На self-hosted не влияет</td></tr>
+          <tr><td>CAC вырос в 2 раза</td><td>Нужно больше маркетинга</td><td style="color:var(--accent-orange)">Payback B2C: 5.6 мес (&gt; lifetime!)</td></tr>
+          <tr><td>Рубль ослаб до 120/$</td><td>API дороже</td><td>Ускоряет переход на self-hosted</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 10. БЕНЧМАРКИ ========== -->
+<div class="section" id="benchmarks">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-cyan)"></span>
+    <h2>Бенчмарки конкурентов</h2>
+  </div>
+  <div class="vpm-card">
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Конкурент</th><th>Оценка MAU</th><th>Средний чек</th><th>Оценка выручки/мес</th><th>Маржа</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">Interior AI (Pieter Levels)</td><td>~100K</td><td>$39/мес</td><td style="color:var(--accent-green);font-weight:600">$45K MRR (публично)</td><td style="color:var(--accent-green)">&#62;99%</td></tr>
+          <tr><td style="font-weight:600">RoomGPT.ru</td><td>~20–50K</td><td>499 ₽</td><td>5–15 млн ₽</td><td>~85–90%</td></tr>
+          <tr><td style="font-weight:600">komnata.ai</td><td>~10–30K</td><td>~300 ₽</td><td>1.5–5 млн ₽</td><td>~85–90%</td></tr>
+          <tr><td style="font-weight:600">ReRoom</td><td>~10–20K</td><td>$25/мес</td><td>$50–100K MRR</td><td>~90%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-top:16px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px">Референс: Interior AI (публичные данные Pieter Levels)</div>
+    <div class="grid-3">
+      <div><span style="font-size:24px;font-weight:700;color:var(--accent-green)">$45K</span><br><span style="font-size:12px;color:var(--text-muted)">MRR (1 разработчик)</span></div>
+      <div><span style="font-size:24px;font-weight:700;color:var(--accent-green)">$240/мес</span><br><span style="font-size:12px;color:var(--text-muted)">Total infrastructure</span></div>
+      <div><span style="font-size:24px;font-weight:700;color:var(--accent-green)">&gt;99%</span><br><span style="font-size:12px;color:var(--text-muted)">Profit margin</span></div>
+    </div>
+    <div style="margin-top:12px;font-size:13px;color:var(--text-muted)">GPU bill: $200/мес на 21K рендеров = $0.01/рендер. DigitalOcean $40/мес. Vanilla PHP, SQLite, jQuery. Без фреймворков.</div>
+    <div style="margin-top:12px;padding:10px 14px;background:rgba(255,184,108,0.08);border:1px solid rgba(255,184,108,0.2);border-radius:8px;font-size:12px;color:var(--accent-orange)">
+      <strong>Ограничение сравнения:</strong> Interior AI — глобальный англоязычный продукт без каталогов, интеграций с производителями и ценообразования. Маржа >99% недостижима для CorpusView из-за принципиально другой структуры затрат (партнёрства, каталоги, B2B-продажи, эквайринг 3%, налог УСН 6%).
+    </div>
+  </div>
+</div>
+
+<!-- ========== 11. ВЫВОДЫ ========== -->
+<div class="section" id="conclusions">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-green)"></span>
+    <h2>Выводы</h2>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="one-liner" style="margin-bottom:0">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Экономика работает, но зависит от B2B</div>
+      <div style="font-size:15px">Маржа 69–92%. Blended LTV/CAC = 6.4. <strong style="color:var(--accent-orange)">79% выручки от B2B.</strong> Точка безубыточности: ~82 платящих (минимум).</div>
+    </div>
+    <div class="one-liner" style="margin-bottom:0;border-color:rgba(255,184,108,0.2);background:linear-gradient(135deg,rgba(255,184,108,0.08),rgba(255,85,85,0.08))">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Три главных риска</div>
+      <div style="font-size:15px;line-height:1.8">
+        1. <strong style="color:var(--accent-orange)">B2B-привлечение</strong> — B2B даёт ~79% выручки. Без B2B модель работает, но нужно больше B2C-пользователей для безубыточности (~1 100 вместо ~715).<br>
+        2. <strong style="color:var(--accent-orange)">Стоимость привлечения B2C</strong> — LTV/CAC = 1.9 (ниже нормы 3.0). CAC на платящего = 800 ₽ при LTV = 1 496 ₽. B2C работает как воронка и источник виральности, а не как основной profit center. Нужна органика (SEO, контент) и виральность (шаринг визуализаций в мессенджеры).<br>
+        3. <strong style="color:var(--accent-orange)">Отток B2C</strong> — кухню покупают раз в 10–15 лет. Пользователь приходит на 3–4 мес, решает задачу и уходит. Это нормально для проектного продукта, но требует постоянного притока новых пользователей.
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Технологическая стратегия</div>
+    <div class="vpm-card-body">
+      <div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-blue)">Phase 1 · MVP</div><div class="cell-content"><strong>API</strong> (fal.ai + Flux)<br>Старт за 2 недели<br>COGS: 3.7 ₽/генерация<br>До 50K генераций/мес</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-green)">Phase 2 · Масштаб</div><div class="cell-content"><strong>Self-hosted GPU</strong><br>Миграция при 50K/мес<br>COGS: 0.07 ₽/генерация<br>Снижение затрат <strong>в 50 раз</strong></div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-purple)">Phase 3 · Рост</div><div class="cell-content"><strong>Fine-tuned модель</strong><br>Собственная для кухонь<br>Выше качество, ниже затраты<br>Конкурентный moat</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Точка безубыточности</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr><th>Сценарий</th><th>Постоянные расходы</th><th>Нужна выручка</th><th>Нужно платящих</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td style="font-weight:600">Основатель сам</td><td>60 500 ₽</td><td>~61 000 ₽</td><td style="color:var(--accent-green);font-weight:600">~82</td></tr>
+          <tr><td style="font-weight:600">С командой (1+1)</td><td>360 500 ₽</td><td>~362 000 ₽</td><td>~489</td></tr>
+          <tr><td style="font-weight:600">Полная (команда + маркетинг)</td><td>760 500 ₽</td><td>~763 000 ₽</td><td>~1 031</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="padding:48px 0;border-top:1px solid var(--border);margin-top:48px;text-align:center">
+  <p style="color:var(--text-muted);font-size:13px"><a href="index.html" style="color:var(--accent-green);text-decoration:none">← Назад к VPM</a> · CorpusView · Юнит-экономика</p>
+</div>
+
+</div>
+<script>
+const G = '#48F1AA', P = '#D2ABF8', B = '#8ECDF8', O = '#FFB86C', R = '#FF5555', C = '#C0EEFF', PK = '#FF79C6';
+const gridColor = '#2a2a30', textColor = '#8b8b94';
+const defaults = Chart.defaults;
+defaults.color = textColor;
+defaults.borderColor = gridColor;
+defaults.font.family = 'Inter';
+defaults.plugins.legend.labels.boxWidth = 12;
+defaults.plugins.legend.labels.padding = 16;
+
+// 1. P&L 12 месяцев
+new Chart(document.getElementById('chartPnL'), {
+  type: 'bar',
+  data: {
+    labels: ['1','2','3','4','5','6','7*','8','9','10','11','12'],
+    datasets: [
+      { label: 'Выручка', data: [21,59,149,305,710,1357,1770,2180,2589,2999,3405,4088], backgroundColor: G+'44', borderColor: G, borderWidth: 1 },
+      { label: 'COGS + налог + пост.', data: [374,395,432,506,669,869,586,623,659,697,733,858], backgroundColor: R+'33', borderColor: R, borderWidth: 1 },
+      { label: 'Прибыль', data: [-353,-336,-283,-201,41,488,1185,1557,1930,2303,2673,3231], type: 'line', borderColor: P, backgroundColor: P+'22', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: function(ctx) { return ctx.raw >= 0 ? G : R; } }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: false }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + c.raw + ' тыс. ₽'; } } } },
+    scales: {
+      x: { title: { display: true, text: 'Месяц' }, grid: { color: gridColor } },
+      y: { title: { display: true, text: 'тыс. ₽' }, grid: { color: gridColor } }
+    }
+  }
+});
+
+// 2. API vs Self-hosted breakeven
+const gens = [0,10,20,30,50,75,100,150,200,300,500];
+new Chart(document.getElementById('chartBreakeven'), {
+  type: 'line',
+  data: {
+    labels: gens.map(g => g + 'K'),
+    datasets: [
+      { label: 'API (Flux $0.04)', data: gens.map(g => g * 3.7), borderColor: O, backgroundColor: O+'22', fill: false, tension: 0.1, pointRadius: 3 },
+      { label: 'Self-hosted A100 (Рег.облако)', data: gens.map(() => 63.4), borderColor: G, backgroundColor: G+'22', borderDash: [8,4], fill: false, pointRadius: 0 },
+      { label: 'Self-hosted RTX 4090 (Vast.ai)', data: gens.map(() => 26.7), borderColor: B, backgroundColor: B+'22', borderDash: [8,4], fill: false, pointRadius: 0 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + Math.round(c.raw) + ' тыс. ₽/мес'; } } } },
+    scales: {
+      x: { title: { display: true, text: 'Генераций / мес (тыс.)' }, grid: { color: gridColor } },
+      y: { title: { display: true, text: 'Затраты, тыс. ₽/мес' }, grid: { color: gridColor }, min: 0, max: 600 }
+    }
+  }
+});
+
+// 3a. Структура расходов API
+new Chart(document.getElementById('chartCostAPI'), {
+  type: 'doughnut',
+  data: {
+    labels: ['AI-генерация (API)', 'Команда', 'Маркетинг', 'Эквайринг 3%', 'CV + хранение + VPS'],
+    datasets: [{ data: [370, 300, 50, 40.7, 16.3], backgroundColor: [R+'cc', P+'cc', O+'cc', PK+'cc', B+'cc'], borderColor: '#151518', borderWidth: 2 }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + ' тыс. ₽/мес'; } } } } }
+});
+
+// 3b. Структура расходов Self-hosted
+new Chart(document.getElementById('chartCostSH'), {
+  type: 'doughnut',
+  data: {
+    labels: ['GPU аренда', 'Команда', 'Маркетинг', 'Эквайринг 3%', 'VPS + хранение'],
+    datasets: [{ data: [63.4, 300, 50, 40.7, 2.3], backgroundColor: [G+'cc', P+'cc', O+'cc', PK+'cc', B+'cc'], borderColor: '#151518', borderWidth: 2 }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + ' тыс. ₽/мес'; } } } } }
+});
+
+// 4. Воронка пользователей
+new Chart(document.getElementById('chartFunnel'), {
+  type: 'bar',
+  data: {
+    labels: ['MAU (все)', 'Free (77%)', 'B2C платящие (15%)', 'B2B платящие (8%)'],
+    datasets: [{
+      data: [5000, 3850, 750, 400],
+      backgroundColor: [C+'88', textColor+'66', B+'aa', P+'aa'],
+      borderColor: [C, textColor, B, P],
+      borderWidth: 1,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw.toLocaleString() + ' пользователей'; } } } },
+    scales: {
+      x: { title: { display: true, text: 'Пользователей' }, grid: { color: gridColor } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// 5. Себестоимость моделей
+new Chart(document.getElementById('chartModels'), {
+  type: 'bar',
+  data: {
+    labels: [
+      'Self-hosted SDXL\n(Vast.ai)',
+      'Self-hosted SDXL\n(Рег.облако)',
+      'SDXL API\n(Stability)',
+      'GPT Image Mini\n(OpenAI)',
+      'Flux Dev\n(fal.ai)',
+      'Flux 1.1 Pro\n(fal.ai)',
+      'GPT Image 1.5\n(OpenAI)',
+      'Flux 2 Pro\n(BFL)',
+      'Stable Ultra\n(Stability)'
+    ],
+    datasets: [{
+      data: [0.05, 0.07, 0.45, 0.5, 2.3, 3.7, 3.7, 5.1, 7.4],
+      backgroundColor: [G+'cc', G+'aa', B+'88', B+'66', O+'66', O+'88', O+'88', R+'66', R+'88'],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw + ' ₽ за генерацию'; } } } },
+    scales: {
+      x: { title: { display: true, text: '₽ за 1 генерацию' }, grid: { color: gridColor }, type: 'logarithmic', min: 0.01, max: 10,
+        ticks: { callback: function(v) { return v + ' ₽'; } }
+      },
+      y: { grid: { display: false } }
+    }
+  }
+});
+</script>
+</body>
+</html>

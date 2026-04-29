@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CorpusView — Unit Economics Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      color: #1f2937;
+      padding: 24px 16px 48px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #111827;
+    }
+
+    /* ── Inputs grid ── */
+    .inputs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 700px) {
+      .inputs-grid { grid-template-columns: 1fr; }
+    }
+
+    fieldset {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    legend {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0 6px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 0.875rem;
+      color: #374151;
+      flex: 1;
+    }
+
+    .field input {
+      width: 100px;
+      text-align: right;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: #111827;
+      background: #f9fafb;
+      flex-shrink: 0;
+    }
+
+    .field input:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 1px;
+      background: #fff;
+    }
+
+    /* ── Summary cards ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 480px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 14px 12px;
+      border-top: 3px solid #e5e7eb;
+    }
+
+    .card.green { border-top-color: #10b981; }
+    .card.yellow { border-top-color: #f59e0b; }
+    .card.red { border-top-color: #ef4444; }
+
+    .card-label {
+      font-size: 0.72rem;
+      color: #6b7280;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .card-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .card.green .card-value { color: #059669; }
+    .card.yellow .card-value { color: #d97706; }
+    .card.red .card-value { color: #dc2626; }
+
+    /* ── Chart ── */
+    .chart-container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 20px;
+    }
+
+    .chart-container h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 16px;
+    }
+
+    canvas { display: block; width: 100% !important; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div style="margin-bottom:16px;font-size:0.85rem;">
+    <a href="index.html" style="color:#3b82f6;text-decoration:none;">← VPM</a>
+    <span style="color:#9ca3af;margin:0 8px;">·</span>
+    <a href="vpm-economics.html" style="color:#3b82f6;text-decoration:none;">Юнит-экономика</a>
+  </div>
+  <h1>CorpusView — Unit Economics Calculator</h1>
+
+  <!-- Inputs -->
+  <div class="inputs-grid">
+    <fieldset>
+      <legend>B2C</legend>
+      <div class="field">
+        <label for="convB2C">Конверсия, %</label>
+        <input type="number" id="convB2C" value="15" step="1" min="0" max="100" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="arppuB2C">ARPPU, ₽/мес</label>
+        <input type="number" id="arppuB2C" value="374" step="10" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="cacB2C">CAC, ₽</label>
+        <input type="number" id="cacB2C" value="800" step="100" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="churnB2C">Churn/мес, %</label>
+        <input type="number" id="churnB2C" value="25" step="1" min="1" max="100" oninput="recalc()">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>B2B</legend>
+      <div class="field">
+        <label for="convB2B">Конверсия, %</label>
+        <input type="number" id="convB2B" value="8" step="1" min="0" max="100" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="arppuB2B">ARPPU, ₽/мес</label>
+        <input type="number" id="arppuB2B" value="2690" step="10" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="cacB2B">CAC, ₽</label>
+        <input type="number" id="cacB2B" value="4000" step="100" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="churnB2B">Churn/мес, %</label>
+        <input type="number" id="churnB2B" value="8" step="1" min="1" max="100" oninput="recalc()">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Общие</legend>
+      <div class="field">
+        <label for="mau">MAU (мес 6)</label>
+        <input type="number" id="mau" value="5000" step="100" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="costGen">Cost/gen, ₽</label>
+        <input type="number" id="costGen" value="3.84" step="0.1" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="fixedCosts">Пост. затраты, ₽/мес</label>
+        <input type="number" id="fixedCosts" value="360500" step="10000" min="0" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="acquiring">Эквайринг, %</label>
+        <input type="number" id="acquiring" value="3" step="0.5" min="0" max="100" oninput="recalc()">
+      </div>
+      <div class="field">
+        <label for="taxRate">Налог (УСН), %</label>
+        <input type="number" id="taxRate" value="6" step="1" min="0" max="100" oninput="recalc()">
+      </div>
+    </fieldset>
+  </div>
+
+  <!-- Summary cards -->
+  <div id="summary" class="summary-grid"></div>
+
+  <!-- Chart -->
+  <div class="chart-container">
+    <h2>P&amp;L по месяцам (12 мес)</h2>
+    <canvas id="plChart" height="320"></canvas>
+  </div>
+</div>
+
+<script>
+  // Constants
+  const FREE_GEN = 5;
+  const B2C_GEN = 20;
+  const B2B_GEN = 165;
+  const INFRA = 2300;
+
+  let chart = null;
+
+  function fmtNum(v) {
+    return Math.round(v).toLocaleString('ru-RU');
+  }
+
+  function fmtK(v) {
+    if (Math.abs(v) >= 1000) {
+      return (v / 1000).toFixed(0) + 'K';
+    }
+    return Math.round(v).toString();
+  }
+
+  function getVal(id) {
+    return parseFloat(document.getElementById(id).value) || 0;
+  }
+
+  function colorClass(val, thresholds) {
+    // thresholds: { green: x, yellow: y } — >=green → green, >=yellow → yellow, else → red
+    if (val >= thresholds.green) return 'green';
+    if (val >= thresholds.yellow) return 'yellow';
+    return 'red';
+  }
+
+  function recalc() {
+    // Read inputs
+    const convB2C    = getVal('convB2C');
+    const arppuB2C   = getVal('arppuB2C');
+    const cacB2C     = getVal('cacB2C');
+    const churnB2C   = getVal('churnB2C');
+
+    const convB2B    = getVal('convB2B');
+    const arppuB2B   = getVal('arppuB2B');
+    const cacB2B     = getVal('cacB2B');
+    const churnB2B   = getVal('churnB2B');
+
+    const targetMAU  = getVal('mau');
+    const costGen    = getVal('costGen');
+    const fixedCosts = getVal('fixedCosts');
+    const acquiring  = getVal('acquiring');
+    const taxRate    = getVal('taxRate');
+
+    // Monthly P&L arrays
+    const revenues   = [];
+    const cogsArr    = [];
+    const totalCostsArr = [];
+    const profitArr  = [];
+    const cumulArr   = [];
+
+    let cumulative = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      // MAU ramp
+      const mauM = m <= 6
+        ? targetMAU * (m / 6)
+        : targetMAU * Math.pow(1.10, m - 6);
+
+      const b2cPaying = Math.round(mauM * convB2C / 100);
+      const b2bPaying = Math.round(mauM * convB2B / 100);
+      const free = Math.max(0, Math.round(mauM) - b2cPaying - b2bPaying);
+
+      const generations = free * FREE_GEN + b2cPaying * B2C_GEN + b2bPaying * B2B_GEN;
+
+      const revenue = b2cPaying * arppuB2C + b2bPaying * arppuB2B;
+      const cogs    = generations * costGen + revenue * (acquiring / 100) + INFRA;
+      const tax     = revenue * (taxRate / 100);
+      const totalCosts = cogs + tax + fixedCosts;
+      const profit  = revenue - totalCosts;
+
+      cumulative += profit;
+
+      revenues.push(revenue);
+      cogsArr.push(cogs);
+      totalCostsArr.push(totalCosts);
+      profitArr.push(profit);
+      cumulArr.push(cumulative);
+    }
+
+    // Unit metrics
+    const cogsPerB2C = B2C_GEN * costGen + arppuB2C * (acquiring / 100);
+    const cogsPerB2B = B2B_GEN * costGen + arppuB2B * (acquiring / 100);
+
+    const lifetimeB2C = 1 / (Math.max(churnB2C, 1) / 100);   // months
+    const lifetimeB2B = 1 / (Math.max(churnB2B, 1) / 100);
+
+    const gpLtvB2C = (arppuB2C - cogsPerB2C) * lifetimeB2C;
+    const gpLtvB2B = (arppuB2B - cogsPerB2B) * lifetimeB2B;
+
+    const ltvCacB2C = cacB2C > 0 ? gpLtvB2C / cacB2C : 0;
+    const ltvCacB2B = cacB2B > 0 ? gpLtvB2B / cacB2B : 0;
+
+    // Month 6 metrics (index 5)
+    const rev6  = revenues[5];
+    const cogs6 = cogsArr[5];
+    const gm6   = rev6 > 0 ? (rev6 - cogs6) / rev6 * 100 : 0;
+
+    // Breakeven
+    let breakeven = '—';
+    for (let i = 0; i < 12; i++) {
+      if (profitArr[i] > 0) {
+        breakeven = i + 1;
+        break;
+      }
+    }
+
+    // Peak loss (min cumulative)
+    const peakLoss = Math.min(...cumulArr);
+
+    // ── Render summary cards ──
+    const beNum = typeof breakeven === 'number' ? breakeven : 999;
+    const beClass = beNum <= 6 ? 'green' : beNum <= 9 ? 'yellow' : 'red';
+    const gmClass = colorClass(gm6, { green: 60, yellow: 40 });
+    const ltv2cClass = colorClass(ltvCacB2C, { green: 3, yellow: 2 });
+    const ltv2bClass = colorClass(ltvCacB2B, { green: 3, yellow: 2 });
+
+    document.getElementById('summary').innerHTML = `
+      <div class="card">
+        <div class="card-label">Revenue / мес (м6)</div>
+        <div class="card-value">${fmtNum(rev6)} ₽</div>
+      </div>
+      <div class="card ${gmClass}">
+        <div class="card-label">Gross Margin %</div>
+        <div class="card-value">${gm6.toFixed(1)}%</div>
+      </div>
+      <div class="card ${ltv2cClass}">
+        <div class="card-label">GP LTV/CAC B2C</div>
+        <div class="card-value">${ltvCacB2C.toFixed(1)}</div>
+      </div>
+      <div class="card ${ltv2bClass}">
+        <div class="card-label">GP LTV/CAC B2B</div>
+        <div class="card-value">${ltvCacB2B.toFixed(1)}</div>
+      </div>
+      <div class="card ${beClass}">
+        <div class="card-label">Breakeven мес</div>
+        <div class="card-value">${breakeven}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Пик убытка</div>
+        <div class="card-value">${fmtNum(peakLoss)} ₽</div>
+      </div>
+    `;
+
+    // ── Render chart ──
+    const labels = ['М1','М2','М3','М4','М5','М6','М7','М8','М9','М10','М11','М12'];
+
+    const datasets = [
+      {
+        label: 'Выручка',
+        data: revenues,
+        borderColor: '#3b82f6',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+      },
+      {
+        label: 'Расходы (COGS+налог+пост.)',
+        data: totalCostsArr,
+        borderColor: '#ef4444',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+      },
+      {
+        label: 'Прибыль',
+        data: profitArr,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.08)',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+        fill: 'origin',
+      },
+      {
+        label: 'Накопленный P&L',
+        data: cumulArr,
+        borderColor: '#6b7280',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+        borderDash: [6, 3],
+      },
+    ];
+
+    if (chart) {
+      chart.data.labels  = labels;
+      chart.data.datasets.forEach((ds, i) => {
+        ds.data = datasets[i].data;
+      });
+      chart.update();
+    } else {
+      const ctx = document.getElementById('plChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.parsed.y;
+                  return ` ${ctx.dataset.label}: ${fmtNum(v)} ₽`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#f3f4f6' }
+            },
+            y: {
+              grid: { color: '#f3f4f6' },
+              ticks: {
+                callback(v) { return fmtK(v); }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  // Initial render
+  recalc();
+</script>
+</body>
+</html>
