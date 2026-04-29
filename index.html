@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CorpusView — Карта ценностного предложения</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #151518;
+    --surface2: #1c1c21;
+    --border: #2a2a30;
+    --text: #e4e4e7;
+    --text-muted: #8b8b94;
+    --accent-green: #48F1AA;
+    --accent-purple: #D2ABF8;
+    --accent-blue: #8ECDF8;
+    --accent-orange: #FFB86C;
+    --accent-pink: #FF79C6;
+    --accent-red: #FF5555;
+    --accent-cyan: #C0EEFF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* --- NAV --- */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .nav-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+  .nav-section {
+    margin-bottom: 16px;
+  }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    padding-left: 8px;
+  }
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .nav a:hover { background: var(--surface2); }
+  .nav a .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* --- MAIN --- */
+  .main {
+    margin-left: 260px;
+    padding: 48px 48px 120px;
+    max-width: 1060px;
+  }
+
+  /* --- HERO --- */
+  .hero {
+    margin-bottom: 64px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .hero .subtitle {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 640px;
+  }
+
+  /* --- SECTIONS --- */
+  .section {
+    margin-bottom: 64px;
+    scroll-margin-top: 32px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .section-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+  }
+  .section-header .section-num {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* --- VPM CARD (main template) --- */
+  .vpm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .vpm-card-header {
+    padding: 16px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+  .vpm-card-body {
+    padding: 20px;
+  }
+
+  /* --- GRID LAYOUTS --- */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .grid-2-narrow {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+  }
+
+  /* --- CELL --- */
+  .cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .cell-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+  .cell-content {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .cell-content p { margin-bottom: 8px; }
+  .cell-content ul { padding-left: 18px; margin-bottom: 8px; }
+  .cell-content li { margin-bottom: 4px; font-size: 13px; }
+  .cell-content .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .tag-f { background: rgba(72,241,170,0.15); color: var(--accent-green); }
+  .tag-r { background: rgba(142,205,248,0.15); color: var(--accent-blue); }
+  .tag-e { background: rgba(210,171,248,0.15); color: var(--accent-purple); }
+  .tag-s { background: rgba(255,184,108,0.15); color: var(--accent-orange); }
+
+  /* --- ONE-LINER --- */
+  .one-liner {
+    background: linear-gradient(135deg, rgba(72,241,170,0.08), rgba(210,171,248,0.08));
+    border: 1px solid rgba(72,241,170,0.2);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  .one-liner-text {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  /* --- COMM BLOCK --- */
+  .comm-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .comm-msg {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    border-bottom: 1px solid var(--border);
+  }
+  .comm-msg-text {
+    padding: 20px;
+  }
+  .comm-msg-vis {
+    padding: 16px;
+    border-left: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .comm-foundations {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 200px;
+  }
+  .comm-foundation {
+    padding: 16px;
+    border-right: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .comm-foundation:last-child { border-right: none; }
+  .comm-foundation-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  /* --- SEGMENT TABS --- */
+  .seg-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .seg-tab {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .seg-tab:hover { border-color: var(--text-muted); }
+  .seg-tab.active {
+    background: var(--accent-green);
+    color: #0a0a0a;
+    border-color: var(--accent-green);
+  }
+  .seg-content { display: none; }
+  .seg-content.active { display: block; }
+
+  /* --- BARRIER ROW --- */
+  .barrier-row {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .barrier-row:last-child { border-bottom: none; }
+  .barrier-name {
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+  }
+  .barrier-list {
+    padding: 14px 16px;
+  }
+  .barrier-list li {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+  }
+  .barrier-list li.critical {
+    color: var(--accent-red);
+    font-weight: 500;
+  }
+
+  /* --- PERSONA --- */
+  .persona {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .persona-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .persona-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .persona-name { font-size: 16px; font-weight: 600; }
+  .persona-meta { font-size: 13px; color: var(--text-muted); }
+
+  /* --- RESPONSIVE --- */
+  @media (max-width: 900px) {
+    .nav { display: none; }
+    .main { margin-left: 0; padding: 24px 16px 80px; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-2-narrow { grid-template-columns: 1fr; }
+    .comm-msg { grid-template-columns: 1fr; }
+    .comm-foundations { grid-template-columns: 1fr; }
+    .barrier-row { grid-template-columns: 1fr; }
+    .barrier-name { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-title">CorpusView</div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Карта ценностного предложения</div>
+    <a href="#vpm"><span class="dot" style="background:var(--accent-green)"></span> Карта (КЦП)</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Потребители</div>
+    <a href="#consumers"><span class="dot" style="background:var(--accent-purple)"></span> Сегменты и персоны</a>
+    <a href="#journeys"><span class="dot" style="background:var(--accent-purple)"></span> Сценарии (Job Stories)</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Анализ рынка</div>
+    <a href="#competitors"><span class="dot" style="background:var(--accent-cyan)"></span> Конкуренты (30+)</a>
+    <a href="#whitespace"><span class="dot" style="background:var(--accent-cyan)"></span> Белое пятно</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Вспомогательные</div>
+    <a href="#problems"><span class="dot" style="background:var(--accent-blue)"></span> Проблемы и выгоды</a>
+    <a href="#barriers"><span class="dot" style="background:var(--accent-orange)"></span> Барьеры решений</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Коммуникация</div>
+    <a href="#communication"><span class="dot" style="background:var(--accent-pink)"></span> Сообщения</a>
+    <a href="#funnel"><span class="dot" style="background:var(--accent-pink)"></span> Воронка</a>
+  </div>
+
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Карта ценностного предложения</h1>
+  <p class="subtitle">CorpusView — SaaS-продукт для визуализации корпусной мебели в реальном интерьере.</p>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap">
+    <span style="background:rgba(72,241,170,0.12);color:var(--accent-green);padding:6px 14px;border-radius:6px;font-size:14px;font-weight:500">Сфотографировать</span>
+    <span style="color:var(--text-muted)">→</span>
+    <span style="background:rgba(142,205,248,0.12);color:var(--accent-blue);padding:6px 14px;border-radius:6px;font-size:14px;font-weight:500">Собрать кухню</span>
+    <span style="color:var(--text-muted)">→</span>
+    <span style="background:rgba(210,171,248,0.12);color:var(--accent-purple);padding:6px 14px;border-radius:6px;font-size:14px;font-weight:500">Увидеть в интерьере</span>
+    <span style="color:var(--text-muted)">→</span>
+    <span style="background:rgba(255,184,108,0.12);color:var(--accent-orange);padding:6px 14px;border-radius:6px;font-size:14px;font-weight:500">Сравнить цены</span>
+    <span style="color:var(--text-muted)">→</span>
+    <span style="background:rgba(255,121,198,0.12);color:var(--accent-pink);padding:6px 14px;border-radius:6px;font-size:14px;font-weight:500">Оставить заявку</span>
+  </div>
+  <p style="color:var(--text-muted);font-size:13px;margin-top:16px">Методика: <a href="https://vpm.rocketyze.com/start" target="_blank" style="color:var(--accent-green);text-decoration:none">VPM Rocketyze</a></p>
+</div>
+
+<!-- ========== 1. КЦП ========== -->
+<div class="section" id="vpm">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-green)"></span>
+    <h2>Карта ценностного предложения</h2>
+  </div>
+
+  <!-- Однострочник -->
+  <div class="one-liner">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Ценностное предложение · однострочник</div>
+    <div class="one-liner-text">Ваша кухня, ваше пространство, реальные цены — без менеджеров и поездок.</div>
+    <div style="font-size:15px;color:var(--text-muted);margin-top:12px;font-weight:400">Не ходите в салон вслепую — сначала соберите, увидьте и узнайте цену.</div>
+  </div>
+
+  <!-- Продукт -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Продукт</div>
+    <div class="vpm-card-body">
+      <p style="font-size:15px">Веб/мобильное приложение (SaaS) для подбора и визуализации корпусной мебели в реальном интерьере. Пользователь загружает фото помещения, конфигурирует мебель (форма, размеры, материалы, цвет), видит результат в контексте своего реального пространства и получает расчёт средней рыночной стоимости — чтобы понимать реальный диапазон цен до обращения в мебельную компанию, проверить предложение конкретного производителя и оценить, в рынке ты или переплачиваешь. Начальная категория: кухонные гарнитуры. Архитектура под расширение до любых типов корпусной мебели: шкафы, системы хранения, гардеробные.</p>
+      <p style="font-size:15px;margin-top:12px"><strong>Для профессионалов (B2B):</strong> ведение каталогов своих кухонь и шаблонов проектов, управление отображением цен (показать / скрыть / своя наценка). Формирует структурированные данные для работы с клиентами.</p>
+      <p style="font-size:15px;margin-top:8px;color:var(--accent-orange)"><strong>Гипотеза (требует проработки):</strong> marketplace-модель — производители публикуют каталоги, пользователи примеряют готовые варианты с реальными ценами, производитель получает лида с готовой конфигурацией.</p>
+    </div>
+  </div>
+
+  <!-- Пример визуализации: до / после -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:12px;overflow:hidden;margin-bottom:24px;background:var(--border)">
+    <div style="position:relative">
+      <img src="vpm-before.jpg" alt="Пустая кухня — до" style="width:100%;height:100%;object-fit:cover;display:block;min-height:280px">
+      <div style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.7);color:var(--text-muted);padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600">ВАШЕ ФОТО</div>
+    </div>
+    <div style="position:relative">
+      <img src="vpm-after.jpg" alt="Кухня с гарнитуром — после" style="width:100%;height:100%;object-fit:cover;display:block;min-height:280px">
+      <div style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.7);color:var(--accent-green);padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600">РЕЗУЛЬТАТ</div>
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:16px">
+        <div style="font-size:22px;font-weight:700;color:#fff">≈ 230 000 ₽</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6)">средняя рыночная стоимость конфигурации</div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:10px 16px;background:var(--surface2);border-radius:8px;margin-top:-20px;margin-bottom:24px;font-size:12px;color:var(--text-muted);line-height:1.6">
+    <span style="color:var(--accent-orange);font-weight:600">Примечание:</span> AI-генераторы (komnata.ai, RoomGPT, GPT и др.) не учитывают реальный масштаб помещения — мебель может быть непропорциональна стенам, потолку и окнам, что сильно искажает восприятие. В CorpusView визуализация привязана к реальным размерам пространства: то, что вы видите на экране, соответствует тому, что получится в жизни.
+  </div>
+
+  <!-- Для кого -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Для кого · Потребитель</div>
+    <div class="vpm-card-body">
+      <div class="grid-2">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-purple)">B2B · Профессионалы</div>
+          <div class="cell-content">
+            <p><strong>P1. Дизайнер корпусной мебели</strong> — показывает клиенту варианты за минуты, ведёт каталог своих шаблонов</p>
+            <p><strong>P2. Замерщик / менеджер</strong> — визуализирует на выезде из каталога своей компании</p>
+            <p><strong>P3. Мебельная компания</strong> — ведёт каталог продукции, управляет ценами, <span style="color:var(--accent-orange)">получает лиды (гипотеза)</span></p>
+          </div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-blue)">B2C · Конечные пользователи</div>
+          <div class="cell-content">
+            <p><strong>C1.</strong> Обновляет фасады на существующей кухне</p>
+            <p><strong>C2.</strong> Планирует новую кухню (новостройка/ремонт)</p>
+            <p><strong>C3.</strong> Хочет показать дизайнеру/производителю своё видение</p>
+            <p><strong>C4.</strong> Мечтает и вдохновляется (ранняя стадия)</p>
+            <p><strong>C5.</strong> Хочет понять реальные цены до похода в магазин</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Когда / Что / Зачем -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Путь потребителя</div>
+    <div class="vpm-card-body">
+      <div class="grid-3">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-orange)">Когда</div>
+          <div class="cell-content">Человеку нужно увидеть как мебель будет выглядеть в конкретном пространстве, но он не может этого сделать доступными средствами</div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-orange)">Что</div>
+          <div class="cell-content">Быстро визуализировать мебель в реальном фото помещения</div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-orange)">Зачем</div>
+          <div class="cell-content">Принять решение (купить / согласовать / оставить заявку) с уверенностью — понимая реальные цены, а не вслепую</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Против кого / Как -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Конкуренты и дифференциация</div>
+    <div class="vpm-card-body">
+      <div class="grid-2">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-red)">Против кого · Ключевые конкуренты</div>
+          <div class="cell-content">
+            <ul>
+              <li><strong>AI-генераторы РФ</strong> — komnata.ai, RoomGPT.ru, ReRoom (красивая абстракция, нет конкретных модулей и цен)</li>
+              <li><strong>AR ритейлеров</strong> — Hoff 3D, Столплит AR, WB AR (только свой магазин)</li>
+              <li><strong>Зарубежные</strong> — IKEA Kreativ, ARKitchen (нет РФ, iOS-only)</li>
+              <li><strong>CAD</strong> — PRO100, Базис (сложно, дорого, десктоп)</li>
+              <li><strong>Мебельные компании</strong> — салоны, онлайн-магазины, частные мастера (одновременно потенциальные клиенты P3)</li>
+              <li><strong>Альтернативы</strong> — Pinterest, дизайнер, «представить в голове»</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-green)">Как · Дифференциация</div>
+          <div class="cell-content">
+            <ul>
+              <li>Не абстракция, а <strong>конкретный гарнитур</strong> с конкретными модулями, материалами и размерами</li>
+              <li>Не один магазин, а <strong>рыночные цены</strong> — сравнивайте стоимость одной конфигурации</li>
+              <li><strong>Конфигуратор кухни по модулям</strong> — форма, фасады, материалы, фурнитура</li>
+              <li><strong>Расчёт стоимости мгновенно</strong> — цена обновляется при каждом изменении</li>
+              <li><strong>Mobile-first</strong> — Android + iOS, для обычного человека</li>
+              <li><strong>Расчёт рыночной стоимости</strong> — понимаешь, сколько это стоит на рынке</li>
+              <li><strong>Каталоги и шаблоны для профи</strong> — дизайнер/компания ведёт свою библиотеку проектов с управлением ценами</li>
+              <li>От визуализации до <strong>заявки</strong> — в одном приложении</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Причины верить -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-green)">Причины верить / доказательства</div>
+    <div class="vpm-card-body">
+      <div class="grid-2">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-cyan)">Внутренние факторы (свойства продукта)</div>
+          <div class="cell-content">
+            <ul>
+              <li>Фото → визуализация за секунды, AI распознаёт геометрию</li>
+              <li>Сохранение перспективы, масштаба, освещения</li>
+              <li>Конфигуратор: форма → модули → фасады → столешница → фурнитура</li>
+              <li>Каждый модуль = реальный SKU с ценой</li>
+              <li>Автоматический расчёт: добавил модуль → цена обновилась</li>
+              <li>Сравнение рыночных цен на одну конфигурацию — видишь реальный диапазон стоимости</li>
+              <li>Слайдер «было / будет», сохранение как изображение, шаринг в мессенджеры</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-cyan)">Внешние факторы (подтверждения)</div>
+          <div class="cell-content">
+            <ul>
+              <li>Демо-видео: фото → визуализация → реальный результат после монтажа</li>
+              <li>Расчёт на основе рыночных данных (проверяемо — можно сверить с сайтами)</li>
+              <li>Бета-тестирование: кол-во пользователей, средняя оценка, цитаты</li>
+              <li>Сравнительные тесты: наш продукт vs AI-генератор vs «в голове»</li>
+              <li>Кейсы «визуализация → реальный результат» с фото рядом</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 2. ПОТРЕБИТЕЛИ ========== -->
+<div class="section" id="consumers">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-purple)"></span>
+    <h2>Сегменты и персоны</h2>
+  </div>
+
+  <!-- B2B -->
+  <div style="margin-bottom:24px">
+    <h3 style="font-size:16px;color:var(--accent-purple);margin-bottom:16px">B2B · Профессионалы</h3>
+    <div class="grid-2">
+      <div class="persona">
+        <div class="persona-header">
+          <div class="persona-avatar" style="background:rgba(210,171,248,0.15);color:var(--accent-purple)">P1</div>
+          <div>
+            <div class="persona-name">Дизайнер корпусной мебели</div>
+            <div class="persona-meta">3−10 клиентов параллельно · PRO100 / SketchUp / 3ds Max</div>
+          </div>
+        </div>
+        <div class="cell-content">
+          <p><strong>Job:</strong> Визуализировать кухню в интерьере клиента за минуты, а не часы, чтобы брать больше заказов.</p>
+          <p><strong>Ценит:</strong> скорость, реалистичность, мгновенные итерации, экспорт изображений и подборок</p>
+          <p><strong>Каталоги:</strong> хранит библиотеку шаблонов и готовых проектов, управляет отображением цен (скрыть / показать / своя наценка)</p>
+          <p><strong>Готовность платить:</strong> высокая (рабочий инструмент)</p>
+        </div>
+      </div>
+      <div class="persona">
+        <div class="persona-header">
+          <div class="persona-avatar" style="background:rgba(210,171,248,0.15);color:var(--accent-purple)">P2</div>
+          <div>
+            <div class="persona-name">Замерщик / выездной менеджер</div>
+            <div class="persona-meta">Работает «в полях» · телефон/планшет · от производителя или посредника</div>
+          </div>
+        </div>
+        <div class="cell-content">
+          <p><strong>Job:</strong> На замере показать клиенту кухню в его пространстве, чтобы он решил здесь и сейчас.</p>
+          <p><strong>Ценит:</strong> простоту, мобильность, отправку в мессенджер</p>
+          <p><strong>Каталоги:</strong> работает с каталогом своей компании — только своя продукция, актуальные цены или без цен</p>
+          <p><strong>Готовность платить:</strong> платит компания</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="persona">
+      <div class="persona-header">
+        <div class="persona-avatar" style="background:rgba(210,171,248,0.15);color:var(--accent-purple)">P3</div>
+        <div>
+          <div class="persona-name">Мебельная компания / производитель</div>
+          <div class="persona-meta">Руководитель / маркетолог · управляет каталогом и ценами · хочет лиды</div>
+        </div>
+      </div>
+      <div class="cell-content">
+        <p><strong>Job:</strong> Вести каталог своей продукции в системе — чтобы дизайнеры и замерщики компании работали с актуальными данными, а клиенты видели корректные конфигурации.</p>
+        <p><strong>Ценит:</strong> управление каталогом (модули, фасады, цены), контроль доступа для сотрудников, структурированные данные</p>
+        <p style="color:var(--accent-orange)"><strong>Гипотеза:</strong> публикация каталога для внешних пользователей → пользователь примеряет конкретный гарнитур → компания получает лида с готовой конфигурацией. Требует проработки.</p>
+        <p><strong>Готовность платить:</strong> высокая (SaaS подписка для бизнеса)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- B2C -->
+  <h3 style="font-size:16px;color:var(--accent-blue);margin-bottom:16px">B2C · Конечные пользователи</h3>
+
+  <div class="persona">
+    <div class="persona-header">
+      <div class="persona-avatar" style="background:rgba(142,205,248,0.15);color:var(--accent-blue)">C1</div>
+      <div>
+        <div class="persona-name">«Обновляю фасады»</div>
+        <div class="persona-meta">Анна, 38 лет · семья, Москва, 3-комн. · 180−250 тыс. ₽/мес | Марина, 52 года · Краснодар, хрущёвка · 90−120 тыс. ₽/мес</div>
+      </div>
+    </div>
+    <div class="cell-content">
+      <p><strong>Job:</strong> Сфотографировать кухню, «примерить» новые фасады, убедиться что результат понравится — до траты денег.</p>
+      <p><strong>Барьер:</strong> «А вдруг в реальности не так» · «Муж скажет — и так нормально» · «Не хочу вызывать замерщика просто посмотреть»</p>
+    </div>
+  </div>
+
+  <div class="persona">
+    <div class="persona-header">
+      <div class="persona-avatar" style="background:rgba(142,205,248,0.15);color:var(--accent-blue)">C2</div>
+      <div>
+        <div class="persona-name">«Планирую новую кухню»</div>
+        <div class="persona-meta">Дмитрий+Ольга, 30/28 · новостройка, ипотека · 200−300 тыс. ₽ | Сергей, 42 · дом, нет времени · 350−500 тыс. ₽</div>
+      </div>
+    </div>
+    <div class="cell-content">
+      <p><strong>Job:</strong> «Примерить» разные варианты кухонь к реальному помещению — понять что влезет, какой стиль, какой бюджет.</p>
+      <p><strong>Барьер:</strong> «Не понимаем что поместится» · «Бесплатные планировщики примитивные» · «Боимся ошибки — кухня на 10 лет»</p>
+    </div>
+  </div>
+
+  <div class="persona">
+    <div class="persona-header">
+      <div class="persona-avatar" style="background:rgba(142,205,248,0.15);color:var(--accent-blue)">C3</div>
+      <div>
+        <div class="persona-name">«Хочу показать дизайнеру»</div>
+        <div class="persona-meta">Екатерина, 34 · маркетолог, ремонт трёшки | Алексей, 29 · IT, студия, хочет сам</div>
+      </div>
+    </div>
+    <div class="cell-content">
+      <p><strong>Job:</strong> Собрать визуализацию «как я это вижу» и показать дизайнеру/производителю — картинку вместо слов.</p>
+      <p><strong>Барьер:</strong> «Дизайнер присылает "не то"» · «Каждая итерация — неделя» · «Плачу за проект, но уже 3-й раз переделываем»</p>
+    </div>
+  </div>
+
+  <div class="persona">
+    <div class="persona-header">
+      <div class="persona-avatar" style="background:rgba(142,205,248,0.15);color:var(--accent-blue)">C4</div>
+      <div>
+        <div class="persona-name">«Мечтаю и вдохновляюсь»</div>
+        <div class="persona-meta">Наталья, 45 · копит 3 года, Воронеж | Иван+Полина, 26/25 · ещё нет квартиры, Екатеринбург</div>
+      </div>
+    </div>
+    <div class="cell-content">
+      <p><strong>Job:</strong> «Поиграть» с вариантами, примерить к своей / типовой кухне, понять что возможно и сколько стоит.</p>
+      <p><strong>Барьер:</strong> «Не хочу заявок и звонков менеджеров» · «Бесплатно бы попробовать» · «Это пока просто мечты»</p>
+    </div>
+  </div>
+
+  <div class="persona">
+    <div class="persona-header">
+      <div class="persona-avatar" style="background:rgba(255,184,108,0.15);color:var(--accent-orange)">C5</div>
+      <div>
+        <div class="persona-name">«Хочу понять цены до магазина»</div>
+        <div class="persona-meta">Любой возраст · перед покупкой · боится переплатить или быть обманутым</div>
+      </div>
+    </div>
+    <div class="cell-content">
+      <p><strong>Job:</strong> Понять реальный диапазон цен на конкретную конфигурацию кухни до визита в салон — чтобы прийти подготовленным и не переплатить.</p>
+      <p><strong>Барьер:</strong> «На сайтах цены "от..." — непонятно сколько реально» · «Менеджеры в салоне накрутят» · «Не с чем сравнить — не знаю рыночную цену»</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 2B. СЦЕНАРИИ (JOB STORIES) ========== -->
+<div class="section" id="journeys">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-purple)"></span>
+    <h2>Сценарии использования (Job Stories)</h2>
+  </div>
+
+  <div class="seg-tabs" id="js-tabs">
+    <div class="seg-tab active" onclick="switchJS('p1')">P1 Дизайнер</div>
+    <div class="seg-tab" onclick="switchJS('p2')">P2 Замерщик</div>
+    <div class="seg-tab" onclick="switchJS('c1')">C1 Фасады</div>
+    <div class="seg-tab" onclick="switchJS('c2')">C2 Новая кухня</div>
+    <div class="seg-tab" onclick="switchJS('c3')">C3 Дизайнеру</div>
+    <div class="seg-tab" onclick="switchJS('c4')">C4 Мечтаю</div>
+    <div class="seg-tab" onclick="switchJS('c5')">C5 Цены</div>
+  </div>
+
+  <div class="seg-content active" id="js-p1">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> я работаю с несколькими клиентами и подготовка одного рендера занимает часы, <strong>я хочу</strong> создавать визуализации за минуты, <strong>чтобы</strong> брать больше заказов и зарабатывать больше.</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Первая встреча с клиентом</div><div class="cell-content">Клиент показывает фото и говорит «хочу что-то такое» → за 5 минут набросать 2−3 варианта → произвести впечатление, закрепить клиента</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Итерации по дизайну</div><div class="cell-content">Клиент просит «а в другом цвете / с другими ручками» → менять параметры мгновенно → не тратить 3 часа на перерендер</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Удалённая работа</div><div class="cell-content">Клиент из другого города прислал фото в WhatsApp → загрузить, подобрать, отправить обратно → работать без выезда</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Сравнительная подборка</div><div class="cell-content">Клиент не может выбрать между 3 вариантами → сгенерировать сравнительную подборку → отправить клиенту в мессенджер</div></div>
+    </div>
+  </div>
+
+  <div class="seg-content" id="js-p2">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> я на замере и клиент не может определиться, <strong>я хочу</strong> за 2 минуты показать кухню в его пространстве, <strong>чтобы</strong> он решил сейчас, а не «ушёл подумать».</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">«Холодный» клиент</div><div class="cell-content">«Я просто прицениваюсь» → удивить AR за 2 минуты → выделиться среди конкурентов</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">«Что поместится?»</div><div class="cell-content">Клиент переживает за маленькую кухню → показать компактные варианты прямо в его 6 м² → снять страх</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">После замера</div><div class="cell-content">Уехал — нужно отправить «что обсуждали» → визуализация + цена в мессенджер → конкретика вместо цифр</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">В салоне</div><div class="cell-content">Посетитель: «а у меня так будет?» → попросить фото его кухни → за минуту наложить гарнитур → из интереса в заказ</div></div>
+    </div>
+  </div>
+
+  <div class="seg-content" id="js-c1">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> кухня устала, но корпуса хорошие, <strong>я хочу</strong> «примерить» новые фасады на своей кухне, <strong>чтобы</strong> убедиться в выборе до траты денег.</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">«Какие бывают?»</div><div class="cell-content">Только узнала про замену фасадов → загрузить фото, полистать стили → понять что вообще бывает</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Убеждение мужа</div><div class="cell-content">Муж говорит «и так нормально» → показать «было/будет» на нашей кухне → он увидит разницу</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Сравнение материалов</div><div class="cell-content">Матовый или глянец? → увидеть оба на своей кухне рядом → выбрать по реальному восприятию</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Отправка производителю</div><div class="cell-content">Определилась → отправить визуализацию в компанию → они точно поймут что хочу</div></div>
+    </div>
+  </div>
+
+  <div class="seg-content" id="js-c2">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> нужна кухня, но не понимаю что поместится, <strong>я хочу</strong> «примерить» разные варианты к своему помещению, <strong>чтобы</strong> выбрать конфигурацию, стиль и бюджет.</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что влезет?</div><div class="cell-content">8 м², боимся что не поместится → увидеть L / U / прямую прямо в помещении → понять что реально</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Сравнить стили</div><div class="cell-content">Жена хочет сканди, я минимализм → оба стиля в нашей кухне → решение на основе картинки</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Подготовиться к салону</div><div class="cell-content">Не хочу чтобы навязали дорогое → подобрать конфигурацию заранее → «я знаю что хочу»</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Планирование бюджета</div><div class="cell-content">Только начали ремонт → собрать вариант в рамках бюджета → хватает или нужно пересматривать?</div></div>
+    </div>
+  </div>
+
+  <div class="seg-content" id="js-c3">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> не могу объяснить дизайнеру что хочу, <strong>я хочу</strong> сама собрать визуализацию, <strong>чтобы</strong> показать точную картинку вместо слов.</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Замена слов картинкой</div><div class="cell-content">Пишу «тёплый минимализм с деревом, но не сканди» → создать визуализацию → убрать потерю смысла</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">ТЗ для производства</div><div class="cell-content">Хочу заказать напрямую → собрать проект с модулями и размерами → прийти с понятным ТЗ</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Обсуждение с семьёй</div><div class="cell-content">Собрала вариант → поделиться ссылкой → собрать мнения до решения</div></div>
+    </div>
+  </div>
+
+  <div class="seg-content" id="js-c4">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> мечтаю о новой кухне, но пока не готова покупать, <strong>я хочу</strong> «поиграть» с вариантами, <strong>чтобы</strong> понять «чего хочу и сколько стоит».</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Вдохновение</div><div class="cell-content">Вечером листаю Instagram → тут же «примерить» к своей кухне → развлечься и помечтать</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Планирование</div><div class="cell-content">Обсуждаем будущую квартиру → попробовать варианты в типовых планировках → к чему копить</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">От мечты к действию</div><div class="cell-content">Год мечтала, накопила → открыть сохранённые проекты → «заказываю на следующей неделе»</div></div>
+    </div>
+  </div>
+
+  <div class="seg-content" id="js-c5">
+    <div class="one-liner" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Большая работа</div>
+      <div style="font-size:16px"><strong>Когда</strong> планирую покупку кухни и не понимаю реальных цен, <strong>я хочу</strong> собрать конфигурацию и получить расчёт рыночной стоимости, <strong>чтобы</strong> знать реальный диапазон цен и не переплатить в салоне.</div>
+    </div>
+    <div class="grid-2">
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Разведка перед салоном</div><div class="cell-content">Иду в мебельный на выходных → заранее собрать «свою» кухню и узнать цену → прийти подготовленным, спрашивать конкретно</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Проверка честности</div><div class="cell-content">Менеджер назвал цену → проверить в приложении ту же конфигурацию → понять, справедливая цена или накрутка</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Сравнение цен</div><div class="cell-content">Собрал конфигурацию → увидел рыночный диапазон → понять: это 120 тыс. или 250 тыс.?</div></div>
+      <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Планирование бюджета</div><div class="cell-content">Хочу понять сколько реально стоит кухня моей мечты → собрать → увидеть итог → заложить в бюджет ремонта</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 2C. КОНКУРЕНТЫ ========== -->
+<div class="section" id="competitors">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-cyan)"></span>
+    <h2>Анализ конкурентов</h2>
+    <span class="section-num">30+ продуктов</span>
+  </div>
+
+  <!-- AI РФ -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-red)">AI-генераторы интерьеров · Россия</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Продукт</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Что делает</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Цена</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Ключевая фишка</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://komnata.ai" target="_blank" style="color:var(--accent-green);text-decoration:none">Комната ИИ</a></td><td style="padding:10px 14px">Смена стилей, примерка мебели, текстуры</td><td style="padding:10px 14px">Free + платно</td><td style="padding:10px 14px">Редактирование текстом и рисунком</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://room-gpt.ru" target="_blank" style="color:var(--accent-green);text-decoration:none">RoomGPT.ru</a></td><td style="padding:10px 14px">Генерация по фото, 50+ стилей, 4K</td><td style="padding:10px 14px">Кредиты</td><td style="padding:10px 14px">«№1 в РФ», AI-редактор командами</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://reroom.ai" target="_blank" style="color:var(--accent-green);text-decoration:none">ReRoom AI</a></td><td style="padding:10px 14px">Редизайн + работает с эскизами</td><td style="padding:10px 14px">3 бесп./день, $25/мес</td><td style="padding:10px 14px">Конвертация эскизов в фотореалистику</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://interior-ai.ru" target="_blank" style="color:var(--accent-green);text-decoration:none">Interior-AI.ru</a></td><td style="padding:10px 14px">Генерация + анализ цен материалов</td><td style="padding:10px 14px">5 бесп./день, от $10/мес</td><td style="padding:10px 14px">Подбор бюджетных альтернатив</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://ideal.house/create/furniture-try-on" target="_blank" style="color:var(--accent-green);text-decoration:none">Ideal House</a></td><td style="padding:10px 14px">Фото мебели → AI ставит в вашу комнату</td><td style="padding:10px 14px">Уточнять</td><td style="padding:10px 14px;color:var(--accent-orange)">Ближе всего к нашей идее</td></tr>
+          <tr><td style="padding:10px 14px"><a href="https://luw.ai" target="_blank" style="color:var(--accent-green);text-decoration:none">Luw AI</a></td><td style="padding:10px 14px">Обучение на ваших референсах</td><td style="padding:10px 14px">3 бесп./день, от $3</td><td style="padding:10px 14px">Результат за 10 сек</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AR РФ -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-purple)">AR-решения · Россия</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Продукт</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Что делает</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Тип</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Ключевая фишка</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://arigami.io" target="_blank" style="color:var(--accent-green);text-decoration:none">ARIGAMI</a></td><td style="padding:10px 14px">3D/AR виджеты для мебельных сайтов</td><td style="padding:10px 14px">B2B</td><td style="padding:10px 14px">1000+ 3D-моделей, +25% повторных заказов</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://hoff.ru/promo/hoff_AR/" target="_blank" style="color:var(--accent-green);text-decoration:none">Hoff Дизайн 3D</a></td><td style="padding:10px 14px">AR-примерка из каталога Hoff</td><td style="padding:10px 14px">Consumer</td><td style="padding:10px 14px">Бесплатно, крупнейшая сеть РФ</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px">Wildberries AR</td><td style="padding:10px 14px">Примерка мебели в приложении WB</td><td style="padding:10px 14px">Consumer</td><td style="padding:10px 14px">Пилот, ограниченный каталог</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px"><a href="https://roometry.io" target="_blank" style="color:var(--accent-green);text-decoration:none">Roometry</a></td><td style="padding:10px 14px">3D из одной фотографии + WebAR</td><td style="padding:10px 14px">B2B</td><td style="padding:10px 14px">3D за 100 сек, снижение возвратов на 20%</td></tr>
+          <tr><td style="padding:10px 14px"><a href="https://elarbis.com" target="_blank" style="color:var(--accent-green);text-decoration:none">ELARBIS</a></td><td style="padding:10px 14px">AR-примерочная + 3D-шоурум</td><td style="padding:10px 14px">B2B</td><td style="padding:10px 14px">Разработали AR для Hoff</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Зарубежные -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-blue)">Ключевые зарубежные</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Продукт</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Страна</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Технология</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Главный барьер</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px">IKEA Kreativ</td><td style="padding:10px 14px">Швеция</td><td style="padding:10px 14px">AR + AI</td><td style="padding:10px 14px">Только IKEA, ушли из РФ</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px">ARKitchen</td><td style="padding:10px 14px">—</td><td style="padding:10px 14px">AR + LiDAR</td><td style="padding:10px 14px">Только iOS, нет РФ</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px">Interior AI</td><td style="padding:10px 14px">Нидерланды</td><td style="padding:10px 14px">Gen AI</td><td style="padding:10px 14px">Абстракция, нет SKU</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px">Roomle</td><td style="padding:10px 14px">Австрия</td><td style="padding:10px 14px">WebGL + AR</td><td style="padding:10px 14px">Enterprise B2B only</td></tr>
+          <tr><td style="padding:10px 14px">PRO100 / Базис</td><td style="padding:10px 14px">Польша / РФ</td><td style="padding:10px 14px">3D CAD</td><td style="padding:10px 14px">Десктоп, сложно, дорого</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Мебельные компании как конкуренты -->
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-orange)">Мебельные компании · конкуренты и одновременно потенциальные клиенты (P3)</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Тип</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Примеры</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Как конкурирует с нами</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Их барьер для пользователя</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted);font-weight:600">Как становится нашим клиентом</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px 14px;font-weight:600">Крупные сети</td>
+            <td style="padding:10px 14px">Мария, Mr.Doors, Hoff, Лемана ПРО</td>
+            <td style="padding:10px 14px">Пользователь идёт в салон вместо приложения — «менеджер всё покажет»</td>
+            <td style="padding:10px 14px;color:var(--accent-red)">Только своя продукция, давление, нужно ехать, цены «от...»</td>
+            <td style="padding:10px 14px;color:var(--accent-purple)">P3: ведёт каталог → дизайнеры/замерщики работают через CorpusView</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px 14px;font-weight:600">Онлайн-магазины</td>
+            <td style="padding:10px 14px">Кухни на заказ через сайт, маркетплейсы</td>
+            <td style="padding:10px 14px">Свои конфигураторы и калькуляторы на сайте</td>
+            <td style="padding:10px 14px;color:var(--accent-red)">Привязаны к одному магазину, нет AR, примитивный 3D</td>
+            <td style="padding:10px 14px;color:var(--accent-purple)">P3: их покупатели приходят подготовленными, зная рыночные цены</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px 14px;font-weight:600">Средние производства</td>
+            <td style="padding:10px 14px">Региональные фабрики, компании с контрактным производством</td>
+            <td style="padding:10px 14px">Замерщик приезжает, показывает каталог, делает проект в офисе</td>
+            <td style="padding:10px 14px;color:var(--accent-red)">Нет визуализации на месте, долгий цикл «замер → проект → согласование»</td>
+            <td style="padding:10px 14px;color:var(--accent-purple)">P2+P3: замерщики визуализируют на месте, каталог в CorpusView</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 14px;font-weight:600">Частные мастера</td>
+            <td style="padding:10px 14px">Авито, Профи.ру, рекомендации</td>
+            <td style="padding:10px 14px">Сарафанное радио: «мне сосед сделал, вот телефон»</td>
+            <td style="padding:10px 14px;color:var(--accent-red)">Нет визуализации, непрозрачная цена, нет гарантий</td>
+            <td style="padding:10px 14px;color:var(--accent-purple)">P1: CorpusView как инструмент для показа клиенту своей работы</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 2D. БЕЛОЕ ПЯТНО ========== -->
+<div class="section" id="whitespace">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-cyan)"></span>
+    <h2>Белое пятно рынка</h2>
+  </div>
+
+  <div class="one-liner">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px">Ни один существующий продукт не объединяет:</div>
+    <div class="cell-content" style="font-size:15px;line-height:2">
+      <p style="color:var(--accent-green)">&#10003; AR/AI визуализация в реальном фото помещения</p>
+      <p style="color:var(--accent-green)">&#10003; Рыночные цены на конкретную конфигурацию</p>
+      <p style="color:var(--accent-green)">&#10003; Конфигурация кухни по модулям (форма, фасады, материалы)</p>
+      <p style="color:var(--accent-green)">&#10003; Мгновенный расчёт стоимости</p>
+      <p style="color:var(--accent-green)">&#10003; Расчёт рыночной стоимости — понять, в рынке ты или переплачиваешь</p>
+      <p style="color:var(--accent-green)">&#10003; Каталоги и шаблоны для профессионалов с управлением ценами</p>
+      <p style="color:var(--accent-green)">&#10003; Конверсия в заявку</p>
+      <p style="color:var(--accent-orange)">? Marketplace: производители публикуют каталоги → лиды с готовой конфигурацией (гипотеза)</p>
+      <p style="color:var(--accent-green)">&#10003; Mobile-first для обычного человека</p>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-cyan)">Стратегия: дополнять, а не воевать</div>
+    <div class="vpm-card-body">
+      <div class="grid-3">
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-pink)">Pinterest</div>
+          <div class="cell-content">Вдохновился → пришёл к нам «примерить» к своей кухне</div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-pink)">komnata.ai / RoomGPT</div>
+          <div class="cell-content">Сгенерировал красивую картинку → пришёл к нам выбрать конкретный гарнитур</div>
+        </div>
+        <div class="cell">
+          <div class="cell-label" style="color:var(--accent-pink)">Hoff 3D</div>
+          <div class="cell-content">Посмотрел в Hoff → пришёл к нам узнать рыночную цену и сравнить</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 3. ПРОБЛЕМЫ И ВЫГОДЫ ========== -->
+<div class="section" id="problems">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-blue)"></span>
+    <h2>Проблемы и выгоды</h2>
+  </div>
+
+  <!-- Tabs -->
+  <div class="seg-tabs" id="pb-tabs">
+    <div class="seg-tab active" onclick="switchPB('all')">Сводка</div>
+    <div class="seg-tab" onclick="switchPB('p1')">P1 Дизайнер</div>
+    <div class="seg-tab" onclick="switchPB('p2')">P2 Замерщик</div>
+    <div class="seg-tab" onclick="switchPB('c1')">C1 Фасады</div>
+    <div class="seg-tab" onclick="switchPB('c2')">C2 Новая кухня</div>
+    <div class="seg-tab" onclick="switchPB('c3')">C3 Дизайнеру</div>
+    <div class="seg-tab" onclick="switchPB('c4')">C4 Мечтаю</div>
+    <div class="seg-tab" onclick="switchPB('c5')">C5 Цены</div>
+  </div>
+
+  <!-- Сводка -->
+  <div class="seg-content active" id="pb-all">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">ТОП-5 проблем через все сегменты</div>
+      <div class="vpm-card-body">
+        <div class="cell-content">
+          <p><span class="tag tag-f">Ф</span> Не могу увидеть как мебель будет выглядеть в МОЁМ пространстве</p>
+          <p><span class="tag tag-e">Э</span><span class="tag tag-r">Р</span> Боюсь ошибиться и потратить деньги зря</p>
+          <p><span class="tag tag-f">Ф</span><span class="tag tag-s">С</span> Не могу передать своё видение другим (мужу, дизайнеру, производителю)</p>
+          <p><span class="tag tag-r">Р</span> Не знаю реальных цен — на сайтах «от...», в салонах могут накрутить</p>
+          <p><span class="tag tag-f">Ф</span> Инструменты: или примитивные, или для профессионалов</p>
+          <p><span class="tag tag-r">Р</span> Медленно — часы/дни на визуализацию, клиент уходит</p>
+        </div>
+      </div>
+    </div>
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-green)">ТОП-5 выгод через все сегменты</div>
+      <div class="vpm-card-body">
+        <div class="cell-content">
+          <p><span class="tag tag-f">Ф</span><span class="tag tag-e">Э</span> Вижу конкретный результат в своём интерьере — уверенность в выборе</p>
+          <p><span class="tag tag-r">Р</span> Принятие решения здесь и сейчас, а не «уйти подумать»</p>
+          <p><span class="tag tag-f">Ф</span><span class="tag tag-s">С</span> Показываю точную картинку вместо слов — все видят одно и то же</p>
+          <p><span class="tag tag-r">Р</span> Знаю рыночную цену — прихожу в салон подготовленным, не переплачиваю</p>
+          <p><span class="tag tag-e">Э</span> От мечты к плану — конкретные размеры, стиль, бюджет</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text-muted);display:flex;gap:16px;flex-wrap:wrap">
+      <span><span class="tag tag-f">Ф</span> функциональные</span>
+      <span><span class="tag tag-r">Р</span> рациональные</span>
+      <span><span class="tag tag-e">Э</span> эмоциональные</span>
+      <span><span class="tag tag-s">С</span> социальные</span>
+    </div>
+  </div>
+
+  <!-- P1 -->
+  <div class="seg-content" id="pb-p1">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">P1 Дизайнер · Когда / Что / Зачем</div>
+      <div class="vpm-card-body">
+        <div class="grid-3">
+          <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">Работаю с несколькими клиентами, каждому нужно показать варианты, один рендер = 2−8 часов</div></div>
+          <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">Создавать реалистичные визуализации в реальном фото клиента за минуты</div></div>
+          <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Брать больше заказов, быстрее согласовывать, зарабатывать больше</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> 2−8 часов на один рендер → не успеваю</p>
+        <p><span class="tag tag-r">Р</span> Пока делаю одному, другие ждут → теряю заказы</p>
+        <p><span class="tag tag-e">Э</span> Клиент уходит «подумать» и не возвращается</p>
+        <p><span class="tag tag-s">С</span> Коллеги уже используют AI, а я отстаю</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> 2−3x больше клиентов, итерации мгновенные</p>
+        <p><span class="tag tag-r">Р</span> Зарабатываю больше при тех же часах</p>
+        <p><span class="tag tag-e">Э</span> Клиент говорит «вау» → профессиональная гордость</p>
+        <p><span class="tag tag-s">С</span> Современный профессионал, рекомендации от клиентов</p>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- P2 -->
+  <div class="seg-content" id="pb-p2">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">P2 Замерщик · Когда / Что / Зачем</div>
+      <div class="vpm-card-body"><div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">На замере у клиента, он не может определиться, уходит «подумать»</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">На месте за 2 минуты показать кухню в его пространстве через планшет</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Клиент принял решение сейчас → оставил заявку</div></div>
+      </div></div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Не могу ничего показать кроме фото из каталога</p>
+        <p><span class="tag tag-r">Р</span> 30−40% «уходят подумать» и не возвращаются</p>
+        <p><span class="tag tag-e">Э</span> Чувствую беспомощность, компания давит на конверсию</p>
+        <p><span class="tag tag-s">С</span> Клиент воспринимает как «обычного замерщика»</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Клиент видит результат и решает на месте</p>
+        <p><span class="tag tag-r">Р</span> Больше закрытых сделок = больше комиссия</p>
+        <p><span class="tag tag-e">Э</span> Уверенность — есть козырь, которого нет у конкурентов</p>
+        <p><span class="tag tag-s">С</span> Клиент рассказывает знакомым «мне показали на планшете»</p>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- C1 -->
+  <div class="seg-content" id="pb-c1">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">C1 «Обновляю фасады» · Когда / Что / Зачем</div>
+      <div class="vpm-card-body"><div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">Кухня устала, фасады потёрлись, узнала что можно заменить только фасады</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">Сфотографировать кухню и «примерить» новые фасады</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Убедиться что результат понравится, прежде чем тратить деньги</div></div>
+      </div></div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> В каталоге красиво, а у меня другой свет и размеры</p>
+        <p><span class="tag tag-r">Р</span> Боюсь потратить 50−150 тыс. ₽ и получить «не то»</p>
+        <p><span class="tag tag-e">Э</span> Не уверена в своём вкусе, муж говорит «и так нормально»</p>
+        <p><span class="tag tag-s">С</span> Подруга обновила, у неё красиво, а у меня по-старому</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Вижу результат на своей кухне, сравниваю матовый vs глянец</p>
+        <p><span class="tag tag-r">Р</span> Уверена в выборе до оплаты, не нужен замерщик</p>
+        <p><span class="tag tag-e">Э</span> Показала мужу — он увидел разницу и согласился</p>
+        <p><span class="tag tag-s">С</span> Скинула подруге — собрала комплименты ещё до покупки</p>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- C2 -->
+  <div class="seg-content" id="pb-c2">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">C2 «Новая кухня» · Когда / Что / Зачем</div>
+      <div class="vpm-card-body"><div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">Нужна кухня (новостройка/ремонт), не понимаю что влезет и как будет выглядеть</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">«Примерить» разные варианты кухонь к реальному помещению</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Выбрать конфигурацию, стиль и бюджет до оплаты</div></div>
+      </div></div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Не понимаю что влезет в 6−10 м²</p>
+        <p><span class="tag tag-r">Р</span> Бюджет ограничен (ипотека), боюсь переплатить</p>
+        <p><span class="tag tag-e">Э</span> Муж хочет одно, я другое — спорим без картинки</p>
+        <p><span class="tag tag-s">С</span> У друзей красиво — хочу не хуже, но на наш бюджет</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Понимаю что влезет, сравниваю стили и цены</p>
+        <p><span class="tag tag-r">Р</span> Контролирую бюджет, иду в салон подготовленной</p>
+        <p><span class="tag tag-e">Э</span> Мы с мужем согласились — оба видим одну картинку</p>
+        <p><span class="tag tag-s">С</span> Покажу маме — «мы выбрали вот такую» — одобрение</p>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- C3 -->
+  <div class="seg-content" id="pb-c3">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">C3 «Показать дизайнеру» · Когда / Что / Зачем</div>
+      <div class="vpm-card-body"><div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">Не могу объяснить дизайнеру что хочу, каждая итерация — неделя</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">Сама собрать визуализацию «как я это вижу»</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Показать точную картинку вместо Pinterest-коллажей</div></div>
+      </div></div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Показываю Pinterest — дизайнер понимает по-своему</p>
+        <p><span class="tag tag-r">Р</span> Плачу за проект, но уже 3-й раз переделываем</p>
+        <p><span class="tag tag-e">Э</span> «Почему он не видит то, что я вижу?»</p>
+        <p><span class="tag tag-s">С</span> Дизайнер закатывает глаза — я некомпетентная</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Точная картинка — 1 итерация вместо 5</p>
+        <p><span class="tag tag-r">Р</span> Экономлю на доработках или не нанимаю дизайнера</p>
+        <p><span class="tag tag-e">Э</span> Контроль — мой проект, моё видение</p>
+        <p><span class="tag tag-s">С</span> Производитель относится серьёзно — подготовленный клиент</p>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- C4 -->
+  <div class="seg-content" id="pb-c4">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">C4 «Мечтаю» · Когда / Что / Зачем</div>
+      <div class="vpm-card-body"><div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">Мечтаю о новой кухне, но пока не готова покупать</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">«Поиграть» с вариантами на своей кухне</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Перейти от мечты к пониманию «чего хочу и сколько стоит»</div></div>
+      </div></div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Pinterest — чужие квартиры, не понимаю как у меня</p>
+        <p><span class="tag tag-r">Р</span> Нет инструмента без обязательств и звонков</p>
+        <p><span class="tag tag-e">Э</span> Мечта остаётся мечтой — не двигаюсь вперёд</p>
+        <p><span class="tag tag-s">С</span> Муж говорит «рано» — а я хочу уже сейчас</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-f">Ф</span> Конкретика вместо фантазий, реальные цены</p>
+        <p><span class="tag tag-r">Р</span> Бесплатно, без регистрации, без звонков</p>
+        <p><span class="tag tag-e">Э</span> Мечта → план, удовольствие от процесса</p>
+        <p><span class="tag tag-s">С</span> «Смотри, вот такая кухня в нашей будущей квартире»</p>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- C5 -->
+  <div class="seg-content" id="pb-c5">
+    <div class="vpm-card">
+      <div class="vpm-card-header" style="color:var(--accent-blue)">C5 «Хочу понять цены» · Когда / Что / Зачем</div>
+      <div class="vpm-card-body"><div class="grid-3">
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Когда</div><div class="cell-content">Планирую покупку кухни, но не понимаю сколько это стоит — на сайтах «от...», в салонах накручивают</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Что</div><div class="cell-content">Получить расчёт рыночной стоимости конкретной конфигурации</div></div>
+        <div class="cell"><div class="cell-label" style="color:var(--accent-orange)">Зачем</div><div class="cell-content">Прийти в магазин подготовленным, знать рыночную цену и не переплатить</div></div>
+      </div></div>
+    </div>
+    <div class="grid-2">
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-red)">Проблемы</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-r">Р</span> На сайтах цены «от 45 000 ₽» — а реально выходит 150 000 ₽</p>
+        <p><span class="tag tag-r">Р</span> Не с чем сравнить — не знаю рыночную цену на мою конфигурацию</p>
+        <p><span class="tag tag-e">Э</span> Страх быть обманутым — менеджер в салоне может накрутить</p>
+        <p><span class="tag tag-f">Ф</span> Чтобы узнать цену, нужно вызвать замерщика или ехать в салон</p>
+        <p><span class="tag tag-s">С</span> Знакомые говорят «нас развели на 30%» — не хочу так же</p>
+      </div></div></div>
+      <div class="vpm-card"><div class="vpm-card-header" style="color:var(--accent-green)">Выгоды</div><div class="vpm-card-body"><div class="cell-content">
+        <p><span class="tag tag-r">Р</span> Вижу точную цену конкретной конфигурации — не «от...», а итого</p>
+        <p><span class="tag tag-r">Р</span> Вижу рыночный диапазон цен — знаю сколько это реально стоит</p>
+        <p><span class="tag tag-e">Э</span> Уверенность — иду в салон зная, сколько это должно стоить</p>
+        <p><span class="tag tag-f">Ф</span> Не нужно никуда ехать и никого вызывать, чтобы узнать цену</p>
+        <p><span class="tag tag-s">С</span> Менеджер не сможет навязать — я подготовлен</p>
+      </div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 4. БАРЬЕРЫ ========== -->
+<div class="section" id="barriers">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-orange)"></span>
+    <h2>Барьеры решений</h2>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-body" style="padding:0">
+      <div class="barrier-row">
+        <div class="barrier-name">Ничего не делать</div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Невозможно точно представить пропорции и цвет</li>
+          <li class="critical">Высокий риск разочарования после покупки</li>
+          <li>Два человека представляют разное</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">Pinterest / Instagram</div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Чужие интерьеры — другие размеры, свет, цвет стен</li>
+          <li>Не переводится в конкретный заказ</li>
+          <li>«Примерно так, но не совсем»</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">AI-генераторы РФ<br><small style="color:var(--text-muted)">komnata.ai, RoomGPT.ru, ReRoom</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Абстрактный интерьер — нельзя выбрать конкретный гарнитур</li>
+          <li class="critical">Нет связи «картинка → SKU → цена → заказ»</li>
+          <li>Непредсказуемый результат</li>
+          <li>Нет конфигурации кухни по модулям</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">AR ритейлеров<br><small style="color:var(--text-muted)">Hoff 3D, Столплит, WB</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Только мебель одного магазина</li>
+          <li>Фокус на отдельных предметах, не на кухне как системе</li>
+          <li>Нет конфигуратора</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">ARKitchen</div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Только iOS (~30% рынка РФ)</li>
+          <li>Нет российских производителей</li>
+          <li>Нет русского языка</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">CAD<br><small style="color:var(--text-muted)">PRO100, Базис</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Невозможно разобраться без обучения</li>
+          <li class="critical">Десктоп-only</li>
+          <li>Дорого (от 13 200 ₽/год)</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">Дизайнер</div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Дорого (от 15 000 ₽)</li>
+          <li class="critical">Долго (2−4 недели)</li>
+          <li>Итерации мучительны</li>
+        </ul></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">Мебельный салон<br><small style="color:var(--text-muted)">Мария, Mr.Doors, Hoff, Леруа и др.</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Нужно ехать физически — время, пробки, выходной</li>
+          <li class="critical">Показывают только свою продукцию — нет сравнения</li>
+          <li>Давление менеджера — «оформляем сегодня?»</li>
+          <li>Образцы в шоуруме ≠ мои размеры и мой интерьер</li>
+          <li>Цену узнаёшь только после замера — до этого «от...»</li>
+        </ul><div style="margin-top:8px;font-size:11px;color:var(--accent-purple)">Одновременно потенциальный клиент P3 — может вести каталог в CorpusView</div></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">Онлайн-магазины кухонь<br><small style="color:var(--text-muted)">Сайты с конфигураторами, маркетплейсы</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Конфигуратор привязан к одному магазину</li>
+          <li class="critical">Нет визуализации в реальном интерьере — абстрактный 3D</li>
+          <li>Цены «от...» — итоговая сумма выясняется после замера</li>
+          <li>Сложно сравнить предложения разных сайтов между собой</li>
+        </ul><div style="margin-top:8px;font-size:11px;color:var(--accent-purple)">Одновременно потенциальный клиент P3 — их покупатели могут прийти подготовленными</div></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name">Частные мастера<br><small style="color:var(--text-muted)">Авито, Профи.ру, сарафанное радио</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Нет визуализации — «поверьте, будет красиво»</li>
+          <li>Сложно оценить качество до начала работы</li>
+          <li>Цена непрозрачна — зависит от мастера, нет рыночного ориентира</li>
+          <li>Риск: нет гарантий, сложно предъявить претензии</li>
+        </ul><div style="margin-top:8px;font-size:11px;color:var(--accent-purple)">Потенциальный пользователь P1/P2 — CorpusView как инструмент для показа клиенту</div></div>
+      </div>
+      <div class="barrier-row">
+        <div class="barrier-name" style="color:var(--accent-green)">Наш продукт<br><small style="color:var(--text-muted)">CorpusView</small></div>
+        <div class="barrier-list"><ul>
+          <li class="critical">Нет доверия — новый продукт</li>
+          <li class="critical">Мало производителей на старте</li>
+          <li>Качество визуализации — если не реалистично, не поверят</li>
+          <li>Нужно скачать/зайти — лишний шаг</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 5. КОММУНИКАЦИЯ ========== -->
+<div class="section" id="communication">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-pink)"></span>
+    <h2>Коммуникация</h2>
+  </div>
+
+  <!-- Msg 1 -->
+  <div class="comm-block">
+    <div class="comm-msg">
+      <div class="comm-msg-text">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent-pink);margin-bottom:8px">Сообщение 1 · B2C</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px">«Увидьте до покупки»</div>
+        <p style="font-size:14px;color:var(--text-muted)">Ваша кухня — ваши стены, ваш свет, ваши размеры. Не чужое фото из Pinterest. Увидьте как новая кухня будет выглядеть именно у вас — до того, как заплатите.</p>
+      </div>
+      <div class="comm-msg-vis">
+        <div class="comm-foundation-label">Визуализация</div>
+        Сплит-экран: реальное фото → кухня с новым гарнитуром. Анимация слайдера «было/будет».
+      </div>
+    </div>
+    <div class="comm-foundations">
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 1</div>Фото → AI распознаёт помещение → мебель с правильным масштабом и перспективой</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 2</div>Слайдер «было/будет» — одним движением</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 3</div>Кейсы: визуализация → фото после монтажа. Совпадение.</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Способы</div>Видео 15 сек (Reels/Shorts), демо на лендинге, App Store</div>
+    </div>
+  </div>
+
+  <!-- Msg 2 -->
+  <div class="comm-block">
+    <div class="comm-msg">
+      <div class="comm-msg-text">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent-pink);margin-bottom:8px">Сообщение 2 · B2C</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px">«Выбирайте, а не гадайте»</div>
+        <p style="font-size:14px;color:var(--text-muted)">Не абстрактная картинка от нейросети. Конкретные модули, фасады, материалы — и реальная рыночная цена. Собирайте и сравнивайте.</p>
+      </div>
+      <div class="comm-msg-vis">
+        <div class="comm-foundation-label">Визуализация</div>
+        3 варианта одной кухни (разные стили/материалы) на одном фото. Под каждым — рыночная цена.
+      </div>
+    </div>
+    <div class="comm-foundations">
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 1</div>Рыночные цены — не привязаны к одному магазину, видите реальный диапазон</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 2</div>Конфигуратор: форма → модули → фасады → столешница. Каждый элемент = реальный товар</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 3</div>Одна конфигурация → рыночный диапазон цен → понимаешь, в рынке ты или нет</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Способы</div>Карусель в таргете, «Как это работает» на лендинге</div>
+    </div>
+  </div>
+
+  <!-- Msg 3 -->
+  <div class="comm-block">
+    <div class="comm-msg">
+      <div class="comm-msg-text">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent-pink);margin-bottom:8px">Сообщение 3 · B2C</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px">«Без обязательств»</div>
+        <p style="font-size:14px;color:var(--text-muted)">Никаких замерщиков, звонков менеджеров и поездок по салонам. Просто откройте и попробуйте. Бесплатно.</p>
+      </div>
+      <div class="comm-msg-vis">
+        <div class="comm-foundation-label">Визуализация</div>
+        Экран смартфона → 3 шага → кнопка «Поделиться» → WhatsApp-превью.
+      </div>
+    </div>
+    <div class="comm-foundations">
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 1</div>Бесплатный старт без регистрации</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 2</div>Результат ваш: сохраняйте, делитесь, возвращайтесь через месяц</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 3</div>Когда готовы — заявка прямо из приложения</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Способы</div>App Store/Google Play, онбординг в приложении</div>
+    </div>
+  </div>
+
+  <!-- Msg 5 B2B -->
+  <div class="comm-block">
+    <div class="comm-msg">
+      <div class="comm-msg-text">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent-purple);margin-bottom:8px">Сообщение 5 · B2B Дизайнеры</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px">«Минуты вместо часов»</div>
+        <p style="font-size:14px;color:var(--text-muted)">Покажите клиенту 3 варианта кухни в его интерьере за одну встречу. Не после 8 часов рендера — прямо сейчас.</p>
+      </div>
+      <div class="comm-msg-vis">
+        <div class="comm-foundation-label">Визуализация</div>
+        Тайм-лапс: фото → 90 сек → 3 варианта → отправка клиенту.
+      </div>
+    </div>
+    <div class="comm-foundations">
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 1</div>Фото → визуализация за секунды. Меняете параметры мгновенно</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 2</div>Сохранение и отправка — изображение в мессенджер или подборка с логотипом</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 3</div>Больше клиентов в день = больше закрытых сделок</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Способы</div>Демо-видео, Telegram-каналы для дизайнеров, B2B-лендинг</div>
+    </div>
+  </div>
+
+  <!-- Msg 6 B2B -->
+  <div class="comm-block">
+    <div class="comm-msg">
+      <div class="comm-msg-text">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent-purple);margin-bottom:8px">Сообщение 6 · B2B Замерщики</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px">«Клиент решает на месте»</div>
+        <p style="font-size:14px;color:var(--text-muted)">На замере покажите клиенту кухню через планшет. Он видит — он решает. Не «подумаю», а «оформляем».</p>
+      </div>
+      <div class="comm-msg-vis">
+        <div class="comm-foundation-label">Визуализация</div>
+        Замерщик с планшетом на кухне клиента. Пара смотрит и улыбается.
+      </div>
+    </div>
+    <div class="comm-foundations">
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 1</div>2 минуты от фото до визуализации</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 2</div>Каталог вашей компании — только ваша продукция</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Основание 3</div>Расчёт → отправка в мессенджер → визуализация + цена</div>
+      <div class="comm-foundation"><div class="comm-foundation-label">Способы</div>B2B-презентация, выставки (МОСБИЛД), прямые продажи</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 7. ВОРОНКА ========== -->
+<div class="section" id="funnel">
+  <div class="section-header">
+    <span class="section-dot" style="background:var(--accent-pink)"></span>
+    <h2>Воронка конверсии по сегментам</h2>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-body" style="padding:0">
+      <div style="padding:20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="background:rgba(210,171,248,0.15);color:var(--accent-purple);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600">Максимальный охват</div>
+        </div>
+        <div style="font-size:15px"><strong>C4</strong> «Мечтают» — бесплатный вход, развлечение, вдохновение</div>
+      </div>
+      <div style="padding:20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="background:rgba(142,205,248,0.15);color:var(--accent-blue);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600">Freemium</div>
+        </div>
+        <div style="font-size:15px"><strong>C3</strong> «Показывают дизайнеру» — формируют привычку, делятся проектами</div>
+      </div>
+      <div style="padding:20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="background:rgba(72,241,170,0.15);color:var(--accent-green);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600">Платный функционал</div>
+        </div>
+        <div style="font-size:15px"><strong>C1 + C2 + C5</strong> «Покупают / оценивают» — реальная потребность, расчёт стоимости, сравнение цен, заявка</div>
+      </div>
+      <div style="padding:20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="background:rgba(255,184,108,0.15);color:var(--accent-orange);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600">B2B подписки</div>
+        </div>
+        <div style="font-size:15px"><strong>P1 + P2</strong> «Профи» — ведение каталогов, шаблоны проектов, ежедневное использование</div>
+        <div style="font-size:15px;margin-top:8px"><strong>P3</strong> «Мебельная компания» — управление каталогом продукции, контроль цен для сотрудников. <span style="color:var(--accent-orange)">Гипотеза: публикация каталога → лиды</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-pink)">Переходы между сегментами</div>
+    <div class="vpm-card-body">
+      <div class="grid-3">
+        <div class="cell"><div class="cell-content" style="font-size:13px"><strong style="color:var(--accent-orange)">C4 → C2</strong><br>Дозрели до покупки — мечта стала планом</div></div>
+        <div class="cell"><div class="cell-content" style="font-size:13px"><strong style="color:var(--accent-orange)">C3 → P1</strong><br>Стал дизайнером, привык к инструменту</div></div>
+        <div class="cell"><div class="cell-content" style="font-size:13px"><strong style="color:var(--accent-orange)">C5 → C2</strong><br>Разведал цены → перешёл к полноценному подбору</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpm-card">
+    <div class="vpm-card-header" style="color:var(--accent-pink)">Сводная матрица сегментов</div>
+    <div class="vpm-card-body" style="padding:0;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted)">Сегмент</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted)">Частота</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted)">Готовность платить</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted)">Критичный фактор</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--text-muted)">Устройство</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">P1 Дизайнер</td><td style="padding:10px 14px">Ежедневно</td><td style="padding:10px 14px;color:var(--accent-green)">Высокая</td><td style="padding:10px 14px">Скорость + реалистичность</td><td style="padding:10px 14px">Ноутбук/планшет</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">P2 Замерщик</td><td style="padding:10px 14px">3−8 раз/нед</td><td style="padding:10px 14px;color:var(--accent-green)">Платит компания</td><td style="padding:10px 14px">Простота + мобильность</td><td style="padding:10px 14px">Телефон/планшет</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">P3 Компания</td><td style="padding:10px 14px">Управление каталогом</td><td style="padding:10px 14px;color:var(--accent-green)">Высокая (SaaS)</td><td style="padding:10px 14px">Каталог + цены + данные</td><td style="padding:10px 14px">Веб</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">C1 Фасады</td><td style="padding:10px 14px">5−10 раз/проект</td><td style="padding:10px 14px;color:var(--accent-blue)">Средняя</td><td style="padding:10px 14px">«Увидеть на своей кухне»</td><td style="padding:10px 14px">Телефон</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">C2 Новая кухня</td><td style="padding:10px 14px">10−30 раз/проект</td><td style="padding:10px 14px;color:var(--accent-blue)">Средняя</td><td style="padding:10px 14px">Что влезет + бюджет</td><td style="padding:10px 14px">Телефон/ноут</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">C3 Дизайнеру</td><td style="padding:10px 14px">5−15 раз/проект</td><td style="padding:10px 14px;color:var(--accent-orange)">Низкая−средняя</td><td style="padding:10px 14px">Передать видение</td><td style="padding:10px 14px">Телефон/ноут</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 14px;font-weight:600">C4 Мечтаю</td><td style="padding:10px 14px">Эпизодически</td><td style="padding:10px 14px;color:var(--accent-red)">Бесплатно</td><td style="padding:10px 14px">Развлечение</td><td style="padding:10px 14px">Телефон</td></tr>
+          <tr><td style="padding:10px 14px;font-weight:600">C5 Цены</td><td style="padding:10px 14px">3−10 раз/проект</td><td style="padding:10px 14px;color:var(--accent-blue)">Средняя</td><td style="padding:10px 14px">Реальная цена, сравнение</td><td style="padding:10px 14px">Телефон/ноут</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="padding:48px 0;border-top:1px solid var(--border);margin-top:48px;text-align:center">
+  <p style="color:var(--text-muted);font-size:13px">CorpusView · Карта ценностного предложения · Методика <a href="https://vpm.rocketyze.com/start" style="color:var(--accent-green);text-decoration:none" target="_blank">VPM Rocketyze</a></p>
+</div>
+
+</div><!-- /main -->
+
+<script>
+function switchPB(id) {
+  document.querySelectorAll('#pb-tabs .seg-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('[id^="pb-"]').forEach(c => { if(c.id !== 'pb-tabs') c.classList.remove('active'); });
+  document.getElementById('pb-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+function switchJS(id) {
+  document.querySelectorAll('#js-tabs .seg-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('[id^="js-"]').forEach(c => { if(c.id !== 'js-tabs') c.classList.remove('active'); });
+  document.getElementById('js-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
